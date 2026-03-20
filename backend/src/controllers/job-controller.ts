@@ -3,6 +3,7 @@ import Job from "../models/job-model";
 import { ZodError } from "zod";
 import { jobSchema, updateJobSchema } from "../validators/job-validator";
 import User from "../models/user-model";
+import Application from "../models/application-model";
 
 export const createJob = async (req: Request, res: Response) => {
   try {
@@ -44,7 +45,17 @@ export const getJobsByRecruiter = async (req: Request, res: Response) => {
       .populate("company", "name logo")
       .sort({ createdAt: -1 });
 
-    res.status(200).json({ jobs });
+    const jobsWithCount = await Promise.all(
+      jobs.map(async (job) => {
+        const count = await Application.countDocuments({ job: job._id });
+        return {
+          ...job.toObject(),
+          applicationsCount: count,
+        };
+      })
+    );
+
+    res.status(200).json({ jobs: jobsWithCount });
   } catch (error) {
     console.error("Get Jobs Error:", error);
     return res.status(500).json({ message: "Internal Server Error" });

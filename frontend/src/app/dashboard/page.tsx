@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Navigation } from "@/components/navigation";
@@ -19,9 +19,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { useSelector, useDispatch } from "react-redux";
 import { RootState } from "@/lib/store";
-import { removeSavedJob } from "@/lib/features/auth/auth-slice";
+import { removeSavedJob, setApplications, setUser } from "@/lib/features/auth/auth-slice";
+import api from "@/utils/axios";
 import {
-  User,
   Mail,
   MapPin,
   Briefcase,
@@ -34,7 +34,10 @@ import {
   Heart,
   Trash2,
   Loader2,
+  Phone,
 } from "lucide-react";
+import { ProfileDialog } from "@/components/profile-dialog";
+import toast from "react-hot-toast";
 
 const statusStyles = {
   pending: {
@@ -52,6 +55,16 @@ const statusStyles = {
     className: "bg-destructive/10 text-destructive",
     icon: XCircle,
   },
+  shortlisted: {
+    label: "Shortlisted",
+    className: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
+    icon: CheckCircle,
+  },
+  hired: {
+    label: "Hired",
+    className: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 font-bold",
+    icon: CheckCircle,
+  },
 };
 
 export default function DashboardPage() {
@@ -60,14 +73,39 @@ export default function DashboardPage() {
   const { user, applications, savedJobs } = useSelector(
     (state: RootState) => state.auth,
   );
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
 
   useEffect(() => {
     if (!user) {
       router.push("/login");
     } else if (user.role === "recruiter") {
       router.push("/recruiter");
+    } else if (user.role === "jobseeker") {
+      const fetchUserApplications = async () => {
+        try {
+          const response = await api.get("/api/applications/user");
+          const apps = response.data.applications || [];
+          const formattedApps = apps.map((app: any) => ({
+            id: app._id,
+            jobId: app.job?._id || "",
+            jobTitle: app.job?.title || "Unknown Job",
+            company: app.job?.company?.name || "Unknown Company",
+            appliedDate: new Date(app.createdAt).toLocaleDateString("en-US", {
+              month: "short",
+              day: "numeric",
+              year: "numeric",
+            }),
+            status: app.status,
+            coverLetter: app.coverLetter,
+          }));
+          dispatch(setApplications(formattedApps));
+        } catch (error) {
+          console.error("Fetch applications error:", error);
+        }
+      };
+      fetchUserApplications();
     }
-  }, [user, router]);
+  }, [user, router, dispatch]);
 
   if (!user) {
     return (
@@ -79,12 +117,35 @@ export default function DashboardPage() {
 
   const applicationStats = {
     total: applications.length,
-    pending: applications.filter((a) => a.status === "pending").length,
-    accepted: applications.filter((a) => a.status === "accepted").length,
-    rejected: applications.filter((a) => a.status === "rejected").length,
+    pending: applications.filter((a: any) => a.status === "pending" || a.status === "shortlisted").length,
+    accepted: applications.filter((a: any) => a.status === "accepted" || a.status === "hired").length,
+    rejected: applications.filter((a: any) => a.status === "rejected").length,
   };
 
-  const profileCompletion = user.skills && user.skills.length > 0 ? 85 : 60;
+  const handleProfileUpdate = async (profileData: any) => {
+    try {
+      const response = await api.put("/api/auth/profile", profileData);
+      if (response.status === 200) {
+        dispatch(setUser(response.data.user));
+        toast.success("Profile updated successfully");
+        setIsProfileOpen(false);
+      }
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Failed to update profile");
+    }
+  };
+
+  const calculateCompletion = () => {
+    let score = 25; // Base score for account
+    if (user.location) score += 15;
+    if (user.phone) score += 15;
+    if (user.bio) score += 15;
+    if (user.experience) score += 15;
+    if (user.skills && user.skills.length > 0) score += 15;
+    return score;
+  };
+
+  const profileCompletion = calculateCompletion();
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -133,6 +194,18 @@ export default function DashboardPage() {
                         <span>{user.location}</span>
                       </div>
                     )}
+                    {user.phone && (
+                      <div className="flex items-center gap-3 text-sm">
+                        <Phone className="h-4 w-4 text-muted-foreground" />
+                        <span>{user.phone}</span>
+                      </div>
+                    )}
+                    {user.experience && (
+                      <div className="flex items-center gap-3 text-sm">
+                        <Briefcase className="h-4 w-4 text-muted-foreground" />
+                        <span>{user.experience} experience</span>
+                      </div>
+                    )}
                   </div>
 
                   <div className="mt-6 pt-6 border-t border-border">
@@ -145,10 +218,21 @@ export default function DashboardPage() {
                     <Progress value={profileCompletion} className="h-2" />
                   </div>
 
-                  <Button variant="outline" className="w-full mt-4">
+                  <Button 
+                    variant="outline" 
+                    className="w-full mt-4"
+                    onClick={() => setIsProfileOpen(true)}
+                  >
                     <Settings className="mr-2 h-4 w-4" />
                     Edit Profile
                   </Button>
+
+                  <ProfileDialog
+                    open={isProfileOpen}
+                    onOpenChange={setIsProfileOpen}
+                    user={user}
+                    onSubmit={handleProfileUpdate}
+                  />
                 </CardContent>
               </Card>
 
@@ -176,8 +260,6 @@ export default function DashboardPage() {
                   </Button>
                 </CardContent>
               </Card>
-
-            
             </div>
 
             {/* Main Content */}
@@ -255,8 +337,8 @@ export default function DashboardPage() {
                           </Button>
                         </div>
                       ) : (
-                        applications.map((application) => {
-                          const status = statusStyles[application.status];
+                        applications.map((application: any) => {
+                          const status = (statusStyles as any)[application.status] || statusStyles.pending;
                           const StatusIcon = status.icon;
                           return (
                             <div
@@ -326,13 +408,18 @@ export default function DashboardPage() {
                               <div>
                                 <h3 className="font-medium">{job.title}</h3>
                                 <p className="text-sm text-muted-foreground">
-                                  {typeof job.company === 'string' ? job.company : job.company?.name} - {job.location}
+                                  {typeof job.company === "string"
+                                    ? job.company
+                                    : job.company?.name}{" "}
+                                  - {job.location}
                                 </p>
                               </div>
                             </div>
                             <div className="flex items-center gap-3">
                               <span className="text-sm font-medium text-primary hidden sm:block">
-                                {typeof job.salary === 'string' ? job.salary : `${job.salary?.min} - ${job.salary?.max} ${job.salary?.currency}`}
+                                {typeof job.salary === "string"
+                                  ? job.salary
+                                  : `${job.salary?.min} - ${job.salary?.max} ${job.salary?.currency}`}
                               </span>
                               <Button variant="ghost" size="icon" asChild>
                                 <Link href={`/jobs/${job._id || job.id}`}>
@@ -343,7 +430,9 @@ export default function DashboardPage() {
                                 variant="ghost"
                                 size="icon"
                                 className="text-destructive hover:text-destructive"
-                                onClick={() => dispatch(removeSavedJob(job._id || job.id))}
+                                onClick={() =>
+                                  dispatch(removeSavedJob(job._id || job.id))
+                                }
                               >
                                 <Trash2 className="h-4 w-4" />
                               </Button>

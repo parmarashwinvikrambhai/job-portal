@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Building2, MapPin, Clock, Bookmark } from "lucide-react";
+import { Building2, MapPin, Clock, Bookmark, CheckCircle } from "lucide-react";
 import { useSelector, useDispatch } from "react-redux";
 import { RootState, AppDispatch } from "@/lib/store";
 import { toggleSaveJobAsync } from "@/lib/features/auth/auth-slice";
@@ -36,9 +36,10 @@ interface JobCardProps {
 export function JobCard({ job, variant = "default", onEdit }: JobCardProps) {
   const router = useRouter();
   const dispatch = useDispatch<AppDispatch>();
-  const { user, savedJobs } = useSelector((state: RootState) => state.auth);
+  const { user, savedJobs, applications } = useSelector((state: RootState) => state.auth);
   
   const saved = savedJobs.some((j) => (j._id || j.id) === (job._id || job.id));
+  const applied = applications.some((app: any) => app.jobId === (job._id || job.id));
 
   const handleSave = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -148,9 +149,17 @@ export function JobCard({ job, variant = "default", onEdit }: JobCardProps) {
         )}
 
         <div className="mt-5 flex items-center justify-between">
-          <Badge variant="secondary" className={typeColors[job.type]}>
-            {job.type}
-          </Badge>
+          <div className="flex items-center gap-2">
+            <Badge variant="secondary" className={typeColors[job.type]}>
+              {job.type}
+            </Badge>
+            {applied && (
+              <Badge variant="outline" className="bg-success/10 text-success border-success/20">
+                <CheckCircle className="mr-1 h-3 w-3" />
+                Applied
+              </Badge>
+            )}
+          </div>
           <Button asChild>
             <Link href={`/jobs/${job.id}`}>
               View Details

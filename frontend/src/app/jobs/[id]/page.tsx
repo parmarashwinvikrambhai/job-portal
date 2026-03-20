@@ -36,7 +36,7 @@ export default function JobDetailPage({
   const { id } = use(params);
   const router = useRouter();
   const dispatch = useDispatch<AppDispatch>();
-  const { user, savedJobs } = useSelector((state: RootState) => state.auth);
+  const { user, savedJobs, applications } = useSelector((state: RootState) => state.auth);
 
   const [job, setJob] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -57,6 +57,8 @@ export default function JobDetailPage({
     fetchJob();
   }, [id]);
 
+  const alreadyApplied = applications.some((app: any) => app.jobId === id);
+
   const saved = job
     ? savedJobs.some((j) => (j._id || j.id) === (job._id || job.id))
     : false;
@@ -73,6 +75,8 @@ export default function JobDetailPage({
   const handleApply = () => {
     if (!user) {
       router.push("/login");
+    } else if (alreadyApplied) {
+      toast.error("You have already applied for this job");
     } else {
       router.push(`/jobs/${job._id}/apply`);
     }
@@ -176,8 +180,21 @@ export default function JobDetailPage({
                   </div>
 
                   <div className="flex flex-wrap gap-3 mt-6 pt-6 border-t border-border">
-                    <Button size="lg" onClick={handleApply}>
-                      Apply Now
+                    <Button 
+                      size="lg" 
+                      onClick={handleApply}
+                      disabled={alreadyApplied}
+                      variant={alreadyApplied ? "secondary" : "default"}
+                      className={alreadyApplied ? "cursor-not-allowed" : ""}
+                    >
+                      {alreadyApplied ? (
+                        <>
+                          <CheckCircle className="mr-2 h-4 w-4 text-success" />
+                          <span className="text-success">Applied</span>
+                        </>
+                      ) : (
+                        "Apply Now"
+                      )}
                     </Button>
                     <Button variant="outline" size="lg" onClick={handleSaveJob}>
                       {saved ? (
@@ -365,11 +382,19 @@ export default function JobDetailPage({
                     Apply now and take the next step in your career
                   </p>
                   <Button
-                    variant="secondary"
-                    className="w-full mt-4"
+                    variant={alreadyApplied ? "secondary" : "outline"}
+                    className={`w-full mt-4 ${alreadyApplied ? "cursor-not-allowed" : ""}`}
                     onClick={handleApply}
+                    disabled={alreadyApplied}
                   >
-                    Apply Now
+                    {alreadyApplied ? (
+                      <>
+                        <CheckCircle className="mr-2 h-4 w-4" />
+                        Applied
+                      </>
+                    ) : (
+                      "Apply Now"
+                    )}
                   </Button>
                 </CardContent>
               </Card>

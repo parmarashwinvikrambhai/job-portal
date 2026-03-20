@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
-import Link from "next/link";
+import { useState, useEffect, Suspense, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Navigation } from "@/components/navigation";
 import { Footer } from "@/components/footer";
@@ -51,6 +50,7 @@ import {
   Loader2,
   Building2,
   Settings,
+  Phone,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -58,7 +58,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { applicants } from "@/lib/mock-data";
 import { useSelector, useDispatch } from "react-redux";
 import { RootState } from "@/lib/store";
 import {
@@ -71,17 +70,39 @@ import { JobFormDialog } from "@/components/job-form-dialog";
 import { CompanyFormDialog } from "@/components/company-form-dialog";
 import api from "@/utils/axios";
 
+interface Applicant {
+  id: string;
+  name: string;
+  position: string;
+  email: string;
+  appliedDate: string;
+  status: string;
+  experience: string;
+  skills: string[];
+  resume: string;
+  coverLetter?: string;
+  phone: string;
+}
+
 const statusStyles = {
   open: { label: "open", className: "bg-success/20 text-success" },
   closed: { label: "Closed", className: "bg-muted text-muted-foreground" },
-  new: { label: "New", className: "bg-primary/20 text-primary" },
-  reviewed: {
-    label: "Reviewed",
-    className: "bg-warning/20 text-warning-foreground",
+  pending: { label: "New", className: "bg-primary/20 text-primary" },
+  accepted: {
+    label: "Accepted",
+    className: "bg-success/20 text-success",
+  },
+  rejected: {
+    label: "Rejected",
+    className: "bg-destructive/10 text-destructive",
   },
   shortlisted: {
     label: "Shortlisted",
-    className: "bg-success/20 text-success",
+    className: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
+  },
+  hired: {
+    label: "Hired",
+    className: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 font-bold",
   },
 };
 
@@ -95,9 +116,8 @@ function RecruiterDashboardContent() {
   const [isPostJobOpen, setIsPostJobOpen] = useState(false);
   const [editingJob, setEditingJob] = useState<any | null>(null);
   const [activeTab, setActiveTab] = useState("jobs");
-  const [selectedApplicant, setSelectedApplicant] = useState<
-    (typeof applicants)[0] | null
-  >(null);
+  const [applicantsData, setApplicantsData] = useState<Applicant[]>([]);
+  const [selectedApplicant, setSelectedApplicant] = useState<Applicant | null>(null);
   const [isRegisterCompanyOpen, setIsRegisterCompanyOpen] = useState(false);
   const [hasCompany, setHasCompany] = useState(false); 
   const [companyInfo, setCompanyInfo] = useState<any | null>(null);
@@ -111,14 +131,59 @@ function RecruiterDashboardContent() {
     }
   }, [user, router]);
 
-  useEffect(() => {
-    if (user && user.role === "recruiter") {
-      fetchCompany();
-      fetchJobs();
+  const fetchApplicants = useCallback(async () => {
+    if (!user) return;
+    try {
+      const response = await api.get("/api/applications/recruiter");
+      const apps = response.data.applications || [];
+      const formattedApps = apps.map((app: any) => ({
+        id: app._id,
+        name: app.applicant?.name || "Unknown",
+        position: app.job?.title || "Unknown Job",
+        email: app.applicant?.email || "",
+        appliedDate: app.createdAt 
+          ? new Date(app.createdAt).toLocaleDateString("en-US", {
+              month: "short",
+              day: "numeric",
+              year: "numeric",
+            })
+          : "Recently",
+        status: app.status || "pending",
+        experience: app.applicant?.experience || "N/A",
+        skills: app.applicant?.skills || [],
+        resume: app.resume,
+        coverLetter: app.coverLetter,
+        phone: app.phone || app.applicant?.phone || "",
+      }));
+      setApplicantsData(formattedApps);
+    } catch (error) {
+      console.error("Failed to fetch applicants", error);
     }
   }, [user]);
 
-  const fetchJobs = async () => {
+  const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
+
+  const handleStatusUpdate = async (applicationId: string, newStatus: string) => {
+    setUpdatingStatus(applicationId);
+    try {
+      const response = await api.put(`/api/applications/status/${applicationId}`, { status: newStatus });
+      if (response.status === 200) {
+        toast.success(`Application ${newStatus} successfully`);
+        // Refresh data
+        fetchApplicants();
+        // Update selected applicant if it matches
+        if (selectedApplicant && selectedApplicant.id === applicationId) {
+          setSelectedApplicant(prev => prev ? { ...prev, status: newStatus } : null);
+        }
+      }
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || `Failed to ${newStatus} application`);
+    } finally {
+      setUpdatingStatus(null);
+    }
+  };
+
+  const fetchJobs = useCallback(async () => {
     if (!user) return;
     try {
       const response = await api.get(`/api/jobs/recruiter/${user.id}`);
@@ -126,11 +191,11 @@ function RecruiterDashboardContent() {
         dispatch(setRecruiterJobs(response.data.jobs));
       }
     } catch (error) {
-      console.error("Failed to fetch jobs");
+      console.error("Failed to fetch jobs", error);
     }
-  };
+  }, [user, dispatch]);
 
-  const fetchCompany = async () => {
+  const fetchCompany = useCallback(async () => {
     if (!user) return;
     try {
       setIsCompanyLoading(true);
@@ -144,7 +209,15 @@ function RecruiterDashboardContent() {
     } finally {
       setIsCompanyLoading(false);
     }
-  };
+  }, [user]);
+
+  useEffect(() => {
+    if (user && user.role === "recruiter") {
+      fetchCompany();
+      fetchJobs();
+      fetchApplicants();
+    }
+  }, [user, fetchCompany, fetchJobs, fetchApplicants]);
 
   const handleRegisterCompany = async (companyData: FormData) => {
     if (!user) return;
@@ -262,12 +335,9 @@ function RecruiterDashboardContent() {
 
   const stats = {
     activeJobs: recruiterJobsList.filter((j) => j.status === "open").length,
-    totalApplicants: recruiterJobsList.reduce(
-      (acc, j) => acc + (j.applicationsCount || 0),
-      0,
-    ),
-    newApplications: applicants.filter((a) => a.status === "new").length,
-    shortlisted: applicants.filter((a) => a.status === "shortlisted").length,
+    totalApplicants: applicantsData.length,
+    newApplications: applicantsData.filter((a) => a.status === "pending").length,
+    shortlisted: applicantsData.filter((a) => a.status === "shortlisted").length,
   };
 
   return (
@@ -346,7 +416,7 @@ function RecruiterDashboardContent() {
               open={isRegisterCompanyOpen}
               onOpenChange={setIsRegisterCompanyOpen}
               companyToEdit={companyInfo}
-              initialName={user?.company}
+              initialName={user?.company || ""}
               onSubmit={handleCompanySubmit}
             />
           </div>
@@ -437,7 +507,7 @@ function RecruiterDashboardContent() {
                 Job Listings ({recruiterJobsList.length})
               </TabsTrigger>
               <TabsTrigger value="applicants">
-                Applicants ({applicants.length})
+                Applicants ({applicantsData.length})
               </TabsTrigger>
             </TabsList>
 
@@ -568,10 +638,10 @@ function RecruiterDashboardContent() {
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-4">
-                        {applicants.map((applicant) => {
+                        {applicantsData.map((applicant) => {
                           const status =
                             (statusStyles as any)[applicant.status] ||
-                            statusStyles.new;
+                            statusStyles.pending;
                           return (
                             <div
                               key={applicant.id}
@@ -587,7 +657,7 @@ function RecruiterDashboardContent() {
                                   <AvatarFallback className="bg-muted">
                                     {applicant.name
                                       .split(" ")
-                                      .map((n) => n[0])
+                                      .map((n: string) => n[0])
                                       .join("")}
                                   </AvatarFallback>
                                 </Avatar>
@@ -635,7 +705,7 @@ function RecruiterDashboardContent() {
                               <AvatarFallback className="text-lg bg-primary text-primary-foreground">
                                 {selectedApplicant.name
                                   .split(" ")
-                                  .map((n) => n[0])
+                                  .map((n: string) => n[0])
                                   .join("")}
                               </AvatarFallback>
                             </Avatar>
@@ -664,31 +734,61 @@ function RecruiterDashboardContent() {
                                 Applied {selectedApplicant.appliedDate}
                               </span>
                             </div>
+                            {selectedApplicant.phone && (
+                              <div className="flex items-center gap-3 text-sm">
+                                <Phone className="h-4 w-4 text-muted-foreground" />
+                                <span>{selectedApplicant.phone}</span>
+                              </div>
+                            )}
                           </div>
 
                           <div>
                             <h4 className="text-sm font-medium mb-2">Skills</h4>
                             <div className="flex flex-wrap gap-2">
-                              {selectedApplicant.skills.map((skill) => (
-                                <Badge key={skill} variant="secondary">
-                                  {skill}
-                                </Badge>
-                              ))}
+                              {selectedApplicant.skills && selectedApplicant.skills.length > 0 ? (
+                                selectedApplicant.skills.map((skill: string) => (
+                                  <Badge key={skill} variant="secondary">
+                                    {skill}
+                                  </Badge>
+                                ))
+                              ) : (
+                                <span className="text-sm text-muted-foreground italic">No skills listed</span>
+                              )}
                             </div>
                           </div>
 
                           <div className="space-y-2">
-                            <Button className="w-full">
-                              <FileText className="mr-2 h-4 w-4" />
-                              View Resume
+                            <Button className="w-full" asChild>
+                              <a href={`${process.env.NEXT_PUBLIC_API_URL}${selectedApplicant.resume}`} target="_blank" rel="noreferrer">
+                                <FileText className="mr-2 h-4 w-4" />
+                                View Resume
+                              </a>
                             </Button>
-                            <div className="flex gap-2">
-                              <Button variant="outline" className="flex-1">
-                                <CheckCircle className="mr-2 h-4 w-4" />
+                            <div className="flex gap-3">
+                              <Button 
+                                variant="outline" 
+                                className="flex-1"
+                                onClick={() => handleStatusUpdate(selectedApplicant.id, "shortlisted")}
+                                disabled={updatingStatus === selectedApplicant.id || selectedApplicant.status === "shortlisted"}
+                              >
+                                {updatingStatus === selectedApplicant.id ? (
+                                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                ) : (
+                                  <CheckCircle className="mr-2 h-4 w-4" />
+                                )}
                                 Shortlist
                               </Button>
-                              <Button variant="outline" className="flex-1">
-                                <XCircle className="mr-2 h-4 w-4" />
+                              <Button 
+                                variant="outline" 
+                                className="flex-1"
+                                onClick={() => handleStatusUpdate(selectedApplicant.id, "rejected")}
+                                disabled={updatingStatus === selectedApplicant.id || selectedApplicant.status === "rejected"}
+                              >
+                                {updatingStatus === selectedApplicant.id ? (
+                                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                ) : (
+                                  <XCircle className="mr-2 h-4 w-4" />
+                                )}
                                 Reject
                               </Button>
                             </div>
@@ -712,6 +812,7 @@ function RecruiterDashboardContent() {
     </div>
   );
 }
+
 
 export default function RecruiterDashboardPage() {
   return (

@@ -54,6 +54,10 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+    experience: {
+      type: String,
+      default: "",
+    },
     savedJobs: [
       {
         type: mongoose.Schema.Types.ObjectId,

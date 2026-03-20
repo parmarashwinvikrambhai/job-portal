@@ -1,7 +1,7 @@
 import type { Request, Response } from "express";
 import userRepositories from "../repositories/auth-repositories";
 import { ZodError } from "zod";
-import { loginSchema, registerSchema } from "../validators/user-validator";
+import { loginSchema, registerSchema, updateProfileSchema } from "../validators/user-validator";
 import bcrypt from "bcrypt";
 import User from "../models/user-model";
 import jwt from "jsonwebtoken";
@@ -37,6 +37,9 @@ export const createUser = async (req: Request, res: Response) => {
       user: {
         id: user._id,
         name: user.name,
+        email: user.email,
+        role: user.role,
+        company: user.company,
       },
     });
   } catch (error) {
@@ -95,6 +98,11 @@ export const loginUser = async (req: Request, res: Response) => {
         name: user.name,
         email: user.email,
         role: user.role,
+        bio: user.bio,
+        skills: user.skills,
+        location: user.location,
+        phone: user.phone,
+        experience: user.experience,
         savedJobs: user.savedJobs,
       },
     });
@@ -123,5 +131,45 @@ export const logoutUser = async (req: Request, res: Response) => {
           ? error.issues[0]?.message
           : "Internal server error...",
     });
+  }
+};
+
+export const updateProfile = async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user.id;
+    const validateData = updateProfileSchema.safeParse(req.body);
+
+    if (!validateData.success) {
+      return res.status(400).json({
+        message: validateData.error.issues[0]?.message || "Validation Error",
+      });
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      { $set: validateData.data },
+      { new: true, runValidators: true },
+    ).select("-password");
+
+    if (!updatedUser) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.status(200).json({
+      message: "Profile updated successfully",
+      user: {
+        id: updatedUser._id,
+        name: updatedUser.name,
+        email: updatedUser.email,
+        role: updatedUser.role,
+        bio: updatedUser.bio,
+        skills: updatedUser.skills,
+        location: updatedUser.location,
+        phone: updatedUser.phone,
+        experience: updatedUser.experience,
+      },
+    });
+  } catch (error) {
+    console.error("Update Profile Error:", error);
   }
 };

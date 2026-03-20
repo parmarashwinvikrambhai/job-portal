@@ -27,6 +27,8 @@ import { featuredJobs } from "@/lib/mock-data";
 import { useSelector, useDispatch } from "react-redux";
 import { RootState } from "@/lib/store";
 import { addApplication } from "@/lib/features/auth/auth-slice";
+import toast from "react-hot-toast";
+import api from "@/utils/axios";
 
 export default function ApplyPage({
   params,
@@ -37,8 +39,9 @@ export default function ApplyPage({
   const router = useRouter();
   const dispatch = useDispatch();
   const { user } = useSelector((state: RootState) => state.auth);
-  const job = featuredJobs.find((j) => j.id === id) || featuredJobs[0];
-
+  
+  const [job, setJob] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
@@ -52,35 +55,64 @@ export default function ApplyPage({
   useEffect(() => {
     if (!user) {
       router.push("/login");
-    } else {
-      setFormData((prev) => ({
-        ...prev,
-        fullName: user.name,
-        email: user.email,
-      }));
+      return;
     }
-  }, [user, router]);
+    
+    setFormData((prev) => ({
+      ...prev,
+      fullName: user.name || "",
+      email: user.email || "",
+    }));
+
+    const fetchJob = async () => {
+      try {
+        setLoading(true);
+        const response = await api.get(`/api/jobs/${id}`);
+        setJob(response.data.job);
+      } catch (error) {
+        console.error("Failed to fetch job", error);
+        toast.error("Job not found");
+        router.push("/jobs");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchJob();
+  }, [id, user, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!resume) {
+      toast.error("Please upload your resume");
+      return;
+    }
+
     setIsSubmitting(true);
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1500));
+    try {
+      const data = new FormData();
+      data.append("phone", formData.phone);
+      data.append("coverLetter", formData.coverLetter);
+      data.append("resume", resume);
 
-    // Add application to user's applications
-    dispatch(
-      addApplication({
-        jobId: job.id,
-        jobTitle: job.title,
-        company: job.company,
-        coverLetter: formData.coverLetter,
-      }),
-    );
+      const response = await api.post(`/api/applications/apply/${id}`, data, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
 
-    setIsSubmitting(false);
-    setIsSubmitted(true);
+      if (response.status === 201) {
+        toast.success("Application submitted successfully!");
+        setIsSubmitted(true);
+      }
+    } catch (error: any) {
+      console.error("Submission error:", error);
+      toast.error(error.response?.data?.message || "Failed to submit application");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
+
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -88,7 +120,7 @@ export default function ApplyPage({
     }
   };
 
-  if (!user) {
+  if (!user || loading || !job) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -114,7 +146,7 @@ export default function ApplyPage({
                 <span className="font-medium text-foreground">{job.title}</span>{" "}
                 at{" "}
                 <span className="font-medium text-foreground">
-                  {job.company}
+                  {job.company?.name}
                 </span>{" "}
                 has been submitted successfully.
               </p>
@@ -147,7 +179,7 @@ export default function ApplyPage({
         <div className="border-b border-border bg-background">
           <div className="container mx-auto px-4 py-4">
             <Link
-              href={`/jobs/${job.id}`}
+              href={`/jobs/${job._id}`}
               className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
               <ArrowLeft className="mr-2 h-4 w-4" />
@@ -168,7 +200,7 @@ export default function ApplyPage({
                   <div>
                     <h2 className="font-semibold text-lg">{job.title}</h2>
                     <p className="text-muted-foreground">
-                      {job.company} - {job.location}
+                      {job.company?.name} - {job.location}
                     </p>
                   </div>
                 </div>

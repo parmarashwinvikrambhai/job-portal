@@ -12,6 +12,9 @@ export interface User {
   title?: string;
   location?: string;
   skills?: string[];
+  bio?: string;
+  phone?: string;
+  experience?: string;
 }
 
 export interface Application {
@@ -20,7 +23,7 @@ export interface Application {
   jobTitle: string;
   company: string;
   appliedDate: string;
-  status: "pending" | "accepted" | "rejected";
+  status: "pending" | "accepted" | "rejected" | "shortlisted" | "hired";
   coverLetter?: string;
 }
 
@@ -37,12 +40,20 @@ export const toggleSaveJobAsync = createAsyncThunk(
   "auth/toggleSaveJob",
   async (job: any, { rejectWithValue }) => {
     try {
-      const response = await api.post(`/api/jobs/toggle-save-job/${job._id || job.id}`);
-      return { job, message: response.data.message, savedJobsIds: response.data.savedJobs };
+      const response = await api.post(
+        `/api/jobs/toggle-save-job/${job._id || job.id}`,
+      );
+      return {
+        job,
+        message: response.data.message,
+        savedJobsIds: response.data.savedJobs,
+      };
     } catch (error: any) {
-      return rejectWithValue(error.response?.data?.message || "Failed to toggle save job");
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to toggle save job",
+      );
     }
-  }
+  },
 );
 
 interface AuthState {
@@ -113,6 +124,9 @@ const authSlice = createSlice({
       };
       state.applications = [newApp, ...state.applications];
     },
+    setApplications: (state, action: PayloadAction<Application[]>) => {
+      state.applications = action.payload;
+    },
     saveJob: (state, action: PayloadAction<Omit<SavedJob, "savedDate">>) => {
       const newSavedJob: SavedJob = {
         ...action.payload,
@@ -125,7 +139,9 @@ const authSlice = createSlice({
       state.savedJobs = [newSavedJob, ...state.savedJobs];
     },
     removeSavedJob: (state, action: PayloadAction<string>) => {
-      state.savedJobs = state.savedJobs.filter((j) => (j._id || j.id) !== action.payload);
+      state.savedJobs = state.savedJobs.filter(
+        (j) => (j._id || j.id) !== action.payload,
+      );
       if (typeof window !== "undefined" && state.user) {
         const updatedUser = { ...state.user, savedJobs: state.savedJobs };
         localStorage.setItem("user", JSON.stringify(updatedUser));
@@ -134,32 +150,42 @@ const authSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      .addCase(toggleSaveJobAsync.fulfilled, (state, action: PayloadAction<any>) => {
-        const { job, message } = action.payload;
-        const jobIdentifier = job._id || job.id;
-        
-        const isCurrentlySaved = state.savedJobs.find(j => (j._id || j.id) === jobIdentifier);
-        
-        if (isCurrentlySaved) {
-          state.savedJobs = state.savedJobs.filter(j => (j._id || j.id) !== jobIdentifier);
-          toast.success("Job removed from saved");
-        } else {
-          state.savedJobs = [job, ...state.savedJobs];
-          toast.success("Job saved successfully");
-        }
+      .addCase(
+        toggleSaveJobAsync.fulfilled,
+        (state, action: PayloadAction<any>) => {
+          const { job, message } = action.payload;
+          const jobIdentifier = job._id || job.id;
 
-        if (typeof window !== "undefined" && state.user) {
-          const updatedUser = { ...state.user, savedJobs: state.savedJobs };
-          localStorage.setItem("user", JSON.stringify(updatedUser));
-          state.user = updatedUser;
-        }
-      })
-      .addCase(toggleSaveJobAsync.rejected, (state, action: PayloadAction<any>) => {
-        toast.error(action.payload as string);
-      });
+          const isCurrentlySaved = state.savedJobs.find(
+            (j) => (j._id || j.id) === jobIdentifier,
+          );
+
+          if (isCurrentlySaved) {
+            state.savedJobs = state.savedJobs.filter(
+              (j) => (j._id || j.id) !== jobIdentifier,
+            );
+            toast.success("Job removed from saved");
+          } else {
+            state.savedJobs = [job, ...state.savedJobs];
+            toast.success("Job saved successfully");
+          }
+
+          if (typeof window !== "undefined" && state.user) {
+            const updatedUser = { ...state.user, savedJobs: state.savedJobs };
+            localStorage.setItem("user", JSON.stringify(updatedUser));
+            state.user = updatedUser;
+          }
+        },
+      )
+      .addCase(
+        toggleSaveJobAsync.rejected,
+        (state, action: PayloadAction<any>) => {
+          toast.error(action.payload as string);
+        },
+      );
   },
 });
 
-export const { setUser, logout, addApplication, saveJob, removeSavedJob } =
+export const { setUser, logout, addApplication, setApplications, saveJob, removeSavedJob } =
   authSlice.actions;
 export default authSlice.reducer;

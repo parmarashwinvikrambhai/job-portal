@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,17 +25,45 @@ import {
   Settings,
 } from "lucide-react";
 import { useSelector, useDispatch } from "react-redux";
-import { RootState } from "@/lib/store";
-import { logout } from "@/lib/features/auth/auth-slice";
+import { RootState, AppDispatch } from "@/lib/store";
+import { logout, setApplications } from "@/lib/features/auth/auth-slice";
 import toast from "react-hot-toast";
 import api from "@/utils/axios";
 
 export function Navigation() {
   const router = useRouter();
-  const dispatch = useDispatch();
+  const dispatch = useDispatch<AppDispatch>();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const { user } = useSelector((state: RootState) => state.auth);
+
+  useEffect(() => {
+    if (user && user.role === "jobseeker") {
+      const fetchApplications = async () => {
+        try {
+          const response = await api.get("/api/applications/user");
+          const apps = response.data.applications || [];
+          const formattedApps = apps.map((app: any) => ({
+            id: app._id,
+            jobId: app.job?._id || "",
+            jobTitle: app.job?.title || "Unknown Job",
+            company: app.job?.company?.name || "Unknown Company",
+            appliedDate: new Date(app.createdAt).toLocaleDateString("en-US", {
+              month: "short",
+              day: "numeric",
+              year: "numeric",
+            }),
+            status: app.status,
+            coverLetter: app.coverLetter,
+          }));
+          dispatch(setApplications(formattedApps));
+        } catch (error) {
+          console.error("Failed to fetch applications in Navigation:", error);
+        }
+      };
+      fetchApplications();
+    }
+  }, [user, dispatch]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
