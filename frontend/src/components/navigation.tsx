@@ -111,14 +111,6 @@ export function Navigation() {
             >
               {user?.role === "recruiter" ? "Job List" : "Find Jobs"}
             </Link>
-            {user?.role === "recruiter" && (
-              <Link
-                href="/recruiter"
-                className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-              >
-                Post Jobs
-              </Link>
-            )}
           </nav>
         </div>
 

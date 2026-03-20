@@ -179,37 +179,39 @@ export default function JobDetailPage({
                     </div>
                   </div>
 
-                  <div className="flex flex-wrap gap-3 mt-6 pt-6 border-t border-border">
-                    <Button 
-                      size="lg" 
-                      onClick={handleApply}
-                      disabled={alreadyApplied}
-                      variant={alreadyApplied ? "secondary" : "default"}
-                      className={alreadyApplied ? "cursor-not-allowed" : ""}
-                    >
-                      {alreadyApplied ? (
-                        <>
-                          <CheckCircle className="mr-2 h-4 w-4 text-success" />
-                          <span className="text-success">Applied</span>
-                        </>
-                      ) : (
-                        "Apply Now"
-                      )}
-                    </Button>
-                    <Button variant="outline" size="lg" onClick={handleSaveJob}>
-                      {saved ? (
-                        <>
-                          <BookmarkCheck className="mr-2 h-4 w-4 text-primary" />
-                          Saved
-                        </>
-                      ) : (
-                        <>
-                          <Bookmark className="mr-2 h-4 w-4" />
-                          Save Job
-                        </>
-                      )}
-                    </Button>
-                  </div>
+                  {user?.role !== "recruiter" && (
+                    <div className="flex flex-wrap gap-3 mt-6 pt-6 border-t border-border">
+                      <Button 
+                        size="lg" 
+                        onClick={handleApply}
+                        disabled={alreadyApplied}
+                        variant={alreadyApplied ? "secondary" : "default"}
+                        className={alreadyApplied ? "cursor-not-allowed" : ""}
+                      >
+                        {alreadyApplied ? (
+                          <>
+                            <CheckCircle className="mr-2 h-4 w-4 text-success" />
+                            <span className="text-success">Applied</span>
+                          </>
+                        ) : (
+                          "Apply Now"
+                        )}
+                      </Button>
+                      <Button variant="outline" size="lg" onClick={handleSaveJob}>
+                        {saved ? (
+                          <>
+                            <BookmarkCheck className="mr-2 h-4 w-4 text-primary" />
+                            Saved
+                          </>
+                        ) : (
+                          <>
+                            <Bookmark className="mr-2 h-4 w-4" />
+                            Save Job
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
 
@@ -373,31 +375,33 @@ export default function JobDetailPage({
                 </CardContent>
               </Card>
 
-              <Card className="bg-primary text-primary-foreground">
-                <CardContent className="p-6 text-center">
-                  <h3 className="font-semibold text-lg">
-                    Interested in this job?
-                  </h3>
-                  <p className="text-sm text-primary-foreground/80 mt-2">
-                    Apply now and take the next step in your career
-                  </p>
-                  <Button
-                    variant={alreadyApplied ? "secondary" : "outline"}
-                    className={`w-full mt-4 ${alreadyApplied ? "cursor-not-allowed" : ""}`}
-                    onClick={handleApply}
-                    disabled={alreadyApplied}
-                  >
-                    {alreadyApplied ? (
-                      <>
-                        <CheckCircle className="mr-2 h-4 w-4" />
-                        Applied
-                      </>
-                    ) : (
-                      "Apply Now"
-                    )}
-                  </Button>
-                </CardContent>
-              </Card>
+              {(user?.role === "jobseeker" || !user) && (
+                <Card className="bg-primary text-primary-foreground border-none">
+                  <CardContent className="p-6 text-center">
+                    <h3 className="font-semibold text-lg">
+                      Interested in this job?
+                    </h3>
+                    <p className="text-sm text-primary-foreground/80 mt-2">
+                      Apply now and take the next step in your career
+                    </p>
+                    <Button
+                      variant="secondary"
+                      className="w-full mt-4 bg-white text-primary hover:bg-white/90 border-none"
+                      onClick={handleApply}
+                      disabled={alreadyApplied}
+                    >
+                      {alreadyApplied ? (
+                        <>
+                          <CheckCircle className="mr-2 h-4 w-4" />
+                          Applied
+                        </>
+                      ) : (
+                        "Apply Now"
+                      )}
+                    </Button>
+                  </CardContent>
+                </Card>
+              )}
             </div>
           </div>
         </div>

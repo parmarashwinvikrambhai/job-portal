@@ -58,6 +58,12 @@ export default function ApplyPage({
       return;
     }
     
+    if (user.role === "recruiter") {
+      toast.error("Recruiters cannot apply for jobs");
+      router.push("/jobs");
+      return;
+    }
+    
     setFormData((prev) => ({
       ...prev,
       fullName: user.name || "",
