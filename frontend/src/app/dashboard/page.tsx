@@ -37,6 +37,7 @@ import {
   Phone,
 } from "lucide-react";
 import { ProfileDialog } from "@/components/profile-dialog";
+import { SkillsDialog } from "@/components/skills-dialog";
 import toast from "react-hot-toast";
 
 const statusStyles = {
@@ -74,6 +75,7 @@ export default function DashboardPage() {
     (state: RootState) => state.auth,
   );
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isSkillsOpen, setIsSkillsOpen] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -132,6 +134,20 @@ export default function DashboardPage() {
       }
     } catch (error: any) {
       toast.error(error.response?.data?.message || "Failed to update profile");
+    }
+  };
+
+  const handleSkillsUpdate = async (skills: string[]) => {
+    try {
+      const response = await api.put("/api/auth/profile", { skills });
+      if (response.status === 200) {
+        dispatch(setUser(response.data.user));
+        toast.success("Skills updated successfully");
+        setIsSkillsOpen(false);
+      }
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Failed to update skills");
+      throw error;
     }
   };
 
@@ -255,9 +271,20 @@ export default function DashboardPage() {
                       </p>
                     )}
                   </div>
-                  <Button variant="link" className="mt-4 p-0 h-auto">
+                  <Button 
+                    variant="link" 
+                    className="mt-4 p-0 h-auto"
+                    onClick={() => setIsSkillsOpen(true)}
+                  >
                     + Add more skills
                   </Button>
+
+                  <SkillsDialog
+                    open={isSkillsOpen}
+                    onOpenChange={setIsSkillsOpen}
+                    userSkills={user.skills || []}
+                    onSubmit={handleSkillsUpdate}
+                  />
                 </CardContent>
               </Card>
             </div>

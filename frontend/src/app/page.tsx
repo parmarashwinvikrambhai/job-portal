@@ -4,9 +4,8 @@ import { Footer } from "@/components/footer"
 import { JobCard } from "@/components/job-card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Card, CardContent } from "@/components/ui/card"
-import { Search, MapPin, Briefcase, Users, Building2, TrendingUp, ArrowRight } from "lucide-react"
-import { featuredJobs, companies } from "@/lib/mock-data"
+import { ArrowRight, Search, MapPin } from "lucide-react"
+import { FeaturedJobs } from "@/components/featured-jobs"
 
 export default function HomePage() {
   return (
@@ -86,11 +85,7 @@ export default function HomePage() {
               </Button>
             </div>
             
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-2">
-              {featuredJobs.slice(0, 6).map((job) => (
-                <JobCard key={job.id} job={job} />
-              ))}
-            </div>
+            <FeaturedJobs />
 
             <div className="mt-8 text-center sm:hidden">
               <Button asChild>
@@ -100,72 +95,6 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* Categories */}
-        <section className="py-16 lg:py-20 bg-muted/30">
-          <div className="container mx-auto px-4">
-            <div className="text-center mb-12">
-              <h2 className="text-2xl font-bold tracking-tight lg:text-3xl">Browse by Category</h2>
-              <p className="text-muted-foreground mt-2">Explore jobs across different industries</p>
-            </div>
-            
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {[
-                { icon: Briefcase, name: "Engineering", count: 3240 },
-                { icon: Users, name: "Design", count: 1890 },
-                { icon: TrendingUp, name: "Marketing", count: 2150 },
-                { icon: Building2, name: "Finance", count: 1670 },
-              ].map((category) => (
-                <Link href="/jobs" key={category.name}>
-                  <Card className="group cursor-pointer transition-all hover:shadow-md hover:border-primary/20">
-                    <CardContent className="p-6">
-                      <div className="flex items-center gap-4">
-                        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
-                          <category.icon className="h-6 w-6 text-primary" />
-                        </div>
-                        <div>
-                          <h3 className="font-semibold group-hover:text-primary transition-colors">{category.name}</h3>
-                          <p className="text-sm text-muted-foreground">{category.count.toLocaleString()} jobs</p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </Link>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* Popular Companies */}
-        <section className="py-16 lg:py-20">
-          <div className="container mx-auto px-4">
-            <div className="text-center mb-12">
-              <h2 className="text-2xl font-bold tracking-tight lg:text-3xl">Popular Companies</h2>
-              <p className="text-muted-foreground mt-2">Top employers actively hiring</p>
-            </div>
-            
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {companies.map((company) => (
-                <Card key={company.name} className="group cursor-pointer transition-all hover:shadow-md hover:border-primary/20">
-                  <CardContent className="p-6">
-                    <div className="flex items-center gap-4">
-                      <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-muted">
-                        <Building2 className="h-7 w-7 text-muted-foreground" />
-                      </div>
-                      <div className="flex-1">
-                        <h3 className="font-semibold group-hover:text-primary transition-colors">{company.name}</h3>
-                        <p className="text-sm text-muted-foreground">{company.industry}</p>
-                      </div>
-                      <div className="text-right">
-                        <div className="font-semibold text-primary">{company.jobs}</div>
-                        <div className="text-xs text-muted-foreground">open jobs</div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </div>
-        </section>
 
         {/* CTA Section */}
         <section className="py-16 lg:py-20 bg-primary text-primary-foreground">
