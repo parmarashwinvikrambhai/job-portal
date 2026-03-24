@@ -29,6 +29,7 @@ import { useSelector, useDispatch } from "react-redux";
 import { RootState } from "@/lib/store";
 import { setAllJobs } from "@/lib/features/jobs/jobs-slice";
 import { Job } from "@/components/job-card";
+import { useSearchParams } from "next/navigation";
 
 const jobTypes = ["Full-time", "Part-time", "Contract", "Remote"];
 const experienceLevels = [
@@ -48,26 +49,44 @@ const salaryRanges = [
 
 export default function JobsPage() {
   const dispatch = useDispatch();
+  const searchParams = useSearchParams();
   const { jobs } = useSelector((state: RootState) => state.jobs);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [location, setLocation] = useState("");
+  
+  const [searchQuery, setSearchQuery] = useState(searchParams.get("keyword") || "");
+  const [location, setLocation] = useState(searchParams.get("location") || "");
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
   const [selectedExperience, setSelectedExperience] = useState<string[]>([]);
   const [selectedSalary, setSelectedSalary] = useState("");
 
-  useEffect(() => {
-    const fetchJobs = async () => {
-      try {
-        const response = await api.get("/api/jobs");
-        if (response.data.jobs) {
-          dispatch(setAllJobs(response.data.jobs));
-        }
-      } catch (error) {
-        console.error("Failed to fetch jobs:", error);
+  const fetchJobs = async (params = {}) => {
+    try {
+      const response = await api.get("/api/jobs", { params });
+      if (response.data.jobs) {
+        dispatch(setAllJobs(response.data.jobs));
       }
-    };
-    fetchJobs();
-  }, [dispatch]);
+    } catch (error) {
+      console.error("Failed to fetch jobs:", error);
+    }
+  };
+
+  useEffect(() => {
+    const keyword = searchParams.get("keyword") || "";
+    const loc = searchParams.get("location") || "";
+    fetchJobs({ keyword, location: loc });
+  }, [searchParams]);
+
+  const handleSearch = () => {
+    fetchJobs({
+      keyword: searchQuery,
+      location: location,
+    });
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      handleSearch();
+    }
+  };
 
   const toggleType = (type: string) => {
     setSelectedTypes((prev) =>
@@ -178,6 +197,7 @@ export default function JobsPage() {
                   placeholder="Job title or keyword"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={handleKeyDown}
                   className="pl-12 h-12"
                 />
               </div>
@@ -188,10 +208,11 @@ export default function JobsPage() {
                   placeholder="City or remote"
                   value={location}
                   onChange={(e) => setLocation(e.target.value)}
+                  onKeyDown={handleKeyDown}
                   className="pl-12 h-12"
                 />
               </div>
-              <Button size="lg" className="h-12 px-8">
+              <Button size="lg" className="h-12 px-8" onClick={handleSearch}>
                 Search
               </Button>
               <Sheet>

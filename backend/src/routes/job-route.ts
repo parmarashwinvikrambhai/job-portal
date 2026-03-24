@@ -7,6 +7,7 @@ import {
   getAllJobs,
   getJobById,
   toggleSaveJob,
+  getGlobalStats,
 } from "../controllers/job-controller";
 import { isAuthorizedUser } from "../middleware/auth-middleware";
 
@@ -14,6 +15,7 @@ const router = express.Router();
 
 router.post("/create", isAuthorizedUser, createJob);
 router.get("/", getAllJobs);
+router.get("/stats/global", getGlobalStats);
 router.get("/recruiter/:recruiterId", isAuthorizedUser, getJobsByRecruiter);
 router.put("/update/:jobId", isAuthorizedUser, updateJob);
 router.delete("/:jobId", isAuthorizedUser, deleteJob);

@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link"
 import { Navigation } from "@/components/navigation"
 import { Footer } from "@/components/footer"
@@ -6,8 +8,28 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ArrowRight, Search, MapPin } from "lucide-react"
 import { FeaturedJobs } from "@/components/featured-jobs"
+import { StatsSection } from "@/components/stats-section"
+import { useState } from "react"
+import { useRouter } from "next/navigation"
 
 export default function HomePage() {
+  const [keyword, setKeyword] = useState("");
+  const [location, setLocation] = useState("");
+  const router = useRouter();
+
+  const handleSearch = () => {
+    const params = new URLSearchParams();
+    if (keyword) params.append("keyword", keyword);
+    if (location) params.append("location", location);
+    router.push(`/jobs?${params.toString()}`);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      handleSearch();
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col">
       <Navigation />
@@ -33,6 +55,9 @@ export default function HomePage() {
                     <Input
                       type="text"
                       placeholder="Job title or keyword"
+                      value={keyword}
+                      onChange={(e) => setKeyword(e.target.value)}
+                      onKeyDown={handleKeyDown}
                       className="pl-12 h-12 text-base border-0 bg-muted/50"
                     />
                   </div>
@@ -41,30 +66,20 @@ export default function HomePage() {
                     <Input
                       type="text"
                       placeholder="City or remote"
+                      value={location}
+                      onChange={(e) => setLocation(e.target.value)}
+                      onKeyDown={handleKeyDown}
                       className="pl-12 h-12 text-base border-0 bg-muted/50"
                     />
                   </div>
-                  <Button size="lg" className="h-12 px-8" asChild>
-                    <Link href="/jobs">Search Jobs</Link>
+                  <Button size="lg" className="h-12 px-8" onClick={handleSearch}>
+                    Search Jobs
                   </Button>
                 </div>
               </div>
 
               {/* Stats */}
-              <div className="mt-12 flex flex-wrap justify-center gap-8 lg:gap-12">
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-foreground">10,000+</div>
-                  <div className="text-sm text-muted-foreground mt-1">Active Jobs</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-foreground">5,000+</div>
-                  <div className="text-sm text-muted-foreground mt-1">Companies</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-foreground">2M+</div>
-                  <div className="text-sm text-muted-foreground mt-1">Job Seekers</div>
-                </div>
-              </div>
+              <StatsSection />
             </div>
           </div>
         </section>

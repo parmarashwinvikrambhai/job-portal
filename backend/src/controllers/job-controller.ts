@@ -4,6 +4,7 @@ import { ZodError } from "zod";
 import { jobSchema, updateJobSchema } from "../validators/job-validator";
 import User from "../models/user-model";
 import Application from "../models/application-model";
+import Company from "../models/company-model";
 
 export const createJob = async (req: Request, res: Response) => {
   try {
@@ -64,14 +65,33 @@ export const getJobsByRecruiter = async (req: Request, res: Response) => {
 
 export const getAllJobs = async (req: Request, res: Response) => {
   try {
-    const jobs = await Job.find({ status: "open" })
+    const { keyword, location } = req.query;
+    const query: any = { status: "open" };
+
+    if (keyword) {
+      query.$or = [
+        { title: { $regex: keyword as string, $options: "i" } },
+        { description: { $regex: keyword as string, $options: "i" } },
+      ];
+    }
+
+    if (location) {
+      query.location = { $regex: location as string, $options: "i" };
+    }
+
+    const jobs = await Job.find(query)
       .populate("company", "name logo")
       .sort({ createdAt: -1 });
 
     res.status(200).json({ jobs });
   } catch (error) {
     console.error("Get All Jobs Error:", error);
-    return res.status(500).json({ message: "Internal Server Error" });
+    return res.status(error instanceof ZodError ? 400 : 500).json({
+      message:
+        error instanceof ZodError
+          ? error.issues[0]?.message
+          : "Internal Server Error",
+    });
   }
 };
 
@@ -192,5 +212,30 @@ export const toggleSaveJob = async (req: Request, res: Response) => {
           ? error.issues[0]?.message
           : "Internal Server Error",
     });
+  }
+};
+
+import fs from "fs";
+
+export const getGlobalStats = async (req: Request, res: Response) => {
+  try {
+    const activeJobsCount = await Job.countDocuments({ status: "open" });
+    const companiesCount = await Company.countDocuments();
+    const jobSeekersCount = await User.countDocuments({ role: "jobseeker" });
+
+    const logMessage = `Stats Debug at ${new Date().toISOString()}: ${JSON.stringify({ activeJobsCount, companiesCount, jobSeekersCount })}\n`;
+    fs.appendFileSync("./stats_debug.log", logMessage);
+
+    res.status(200).json({
+      stats: {
+        activeJobs: activeJobsCount,
+        companies: companiesCount,
+        jobSeekers: jobSeekersCount,
+      },
+    });
+  } catch (error) {
+    const errorLog = `Stats Error at ${new Date().toISOString()}: ${error}\n`;
+    fs.appendFileSync("./stats_debug.log", errorLog);
+    return res.status(500).json({ message: "Internal Server Error" });
   }
 };
