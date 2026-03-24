@@ -70,6 +70,12 @@ export const loginUser = async (req: Request, res: Response) => {
         .status(404)
         .json({ message: "invalid email or User not found..." });
     }
+
+    if (user.status && user.status !== "active") {
+      return res.status(403).json({
+        message: `Your account is ${user.status}. Please contact support.`,
+      });
+    }
     const isMatching = await bcrypt.compare(password, user.password);
     if (!isMatching) {
       return res.status(404).json({ message: "Invalid Password..." });
@@ -171,5 +177,59 @@ export const updateProfile = async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error("Update Profile Error:", error);
+  }
+};
+export const getAllUsers = async (req: Request, res: Response) => {
+  try {
+    const currentAdminId = (req as any).user.id;
+    const { search } = req.query;
+
+    let query: any = { _id: { $ne: currentAdminId } };
+
+    if (search) {
+      query.$or = [
+        { name: { $regex: search, $options: "i" } },
+        { email: { $regex: search, $options: "i" } },
+      ];
+    }
+
+    const users = await User.find(query).select("-password");
+    res.status(200).json({ users });
+  } catch (error) {
+    console.error("Get All Users Error:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+export const updateUserByAdmin = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { role, status } = req.body;
+    const updatedUser = await User.findByIdAndUpdate(
+      id,
+      { $set: { role, status } },
+      { new: true },
+    ).select("-password");
+    if (!updatedUser) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    res.status(200).json({ message: "User updated successfully", user: updatedUser });
+  } catch (error) {
+    console.error("Update User By Admin Error:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+export const deleteUserByAdmin = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const deletedUser = await User.findByIdAndDelete(id);
+    if (!deletedUser) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    res.status(200).json({ message: "User deleted successfully" });
+  } catch (error) {
+    console.error("Delete User By Admin Error:", error);
+    res.status(500).json({ message: "Internal server error" });
   }
 };

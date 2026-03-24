@@ -19,8 +19,8 @@ export const registerSchema = z.object({
     .max(32, "Password cannot exceed 32 characters"),
  
   role: z
-    .enum(["jobseeker", "recruiter"], {
-      message: "Role must be either jobseeker or recruiter",
+    .enum(["jobseeker", "recruiter", "admin"], {
+      message: "Role must be either jobseeker, recruiter or admin",
     })
     .default("jobseeker"),
  

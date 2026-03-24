@@ -61,7 +61,10 @@ export default function LoginPage() {
         }
       }
     } catch (error: any) {
-      toast.error(error.response?.data?.message || "Invalid email or password");
+      // 403 errors are handled by the axios interceptor (suspended/banned)
+      if (error.response?.status !== 403) {
+        toast.error(error.response?.data?.message || "Invalid email or password");
+      }
     } finally {
       setIsLoading(false);
     }

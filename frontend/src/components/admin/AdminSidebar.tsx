@@ -11,9 +11,30 @@ import {
   Settings,
   LogOut
 } from "lucide-react";
+import { useDispatch } from "react-redux";
+import { AppDispatch } from "@/lib/store";
+import { logout } from "@/lib/features/auth/auth-slice";
+import { useRouter } from "next/navigation";
+import toast from "react-hot-toast";
+import api from "@/utils/axios";
 
 export function AdminSidebar() {
   const pathname = usePathname();
+  const dispatch = useDispatch<AppDispatch>();
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    try {
+      await api.post("/api/auth/logout");
+      dispatch(logout());
+      toast.success("Logged out successfully");
+      router.push("/login");
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Error logging out");
+      dispatch(logout());
+      router.push("/login");
+    }
+  };
 
   const navItems = [
     { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
@@ -57,13 +78,13 @@ export function AdminSidebar() {
       </nav>
 
       <div className="p-4 border-t border-gray-800">
-        <Link 
-            href="/"
-            className="flex items-center gap-3 px-4 py-3 text-red-400 hover:bg-gray-800 hover:text-red-300 rounded-lg transition-colors"
+        <button 
+            onClick={handleLogout}
+            className="w-full flex items-center gap-3 px-4 py-3 text-red-400 hover:bg-gray-800 hover:text-red-300 rounded-lg transition-colors"
         >
           <LogOut className="w-5 h-5" />
           <span className="font-medium">Logout</span>
-        </Link>
+        </button>
       </div>
     </div>
   );
