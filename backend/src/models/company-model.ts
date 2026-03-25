@@ -27,6 +27,11 @@ const companySchema = new mongoose.Schema({
       trim: true,
       default: '',
     },
+    status: {
+      type: String,
+      enum: ["Pending", "Verified", "Suspended"],
+      default: "Pending",
+    },
     logo: {
       type: String,    
       default: '',

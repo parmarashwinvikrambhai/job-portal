@@ -17,6 +17,15 @@ export const createJob = async (req: Request, res: Response) => {
       });
     }
 
+    const companyObj = await Company.findById(validateData.data.company);
+    if (!companyObj) {
+      return res.status(404).json({ message: "Company not found" });
+    }
+
+    if (companyObj.status !== "Verified") {
+      return res.status(403).json({ message: `Your company is ${companyObj.status}. You cannot post jobs until it is Verified.` });
+    }
+
     const job = await Job.create({
       ...validateData.data,
       createdBy: userId,
@@ -156,7 +165,7 @@ export const deleteJob = async (req: Request, res: Response) => {
       return res.status(404).json({ message: "Job not found" });
     }
 
-    if (existingJob.createdBy.toString() !== userId) {
+    if (existingJob.createdBy.toString() !== userId && (req as any).user.role !== "admin") {
       return res.status(403).json({ message: "Not authorized to delete this job" });
     }
 
@@ -248,6 +257,29 @@ export const getGlobalStats = async (req: Request, res: Response) => {
     });
   } catch (error) {
 
+    return res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
+export const getAdminJobs = async (req: Request, res: Response) => {
+  try {
+    const jobs = await Job.find({})
+      .populate("company", "name logo")
+      .sort({ createdAt: -1 });
+
+    const jobsWithCount = await Promise.all(
+      jobs.map(async (job) => {
+        const count = await Application.countDocuments({ job: job._id });
+        return {
+          ...job.toObject(),
+          applicationsCount: count,
+        };
+      })
+    );
+
+    res.status(200).json({ jobs: jobsWithCount });
+  } catch (error) {
+    console.error("Get Admin Jobs Error:", error);
     return res.status(500).json({ message: "Internal Server Error" });
   }
 };

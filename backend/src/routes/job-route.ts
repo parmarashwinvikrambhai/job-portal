@@ -8,13 +8,15 @@ import {
   getJobById,
   toggleSaveJob,
   getGlobalStats,
+  getAdminJobs,
 } from "../controllers/job-controller";
-import { isAuthorizedUser } from "../middleware/auth-middleware";
+import { isAuthorizedUser, isAdmin } from "../middleware/auth-middleware";
 
 const router = express.Router();
 
 router.post("/create", isAuthorizedUser, createJob);
 router.get("/", getAllJobs);
+router.get("/admin/all", isAuthorizedUser, isAdmin, getAdminJobs);
 router.get("/stats/global", getGlobalStats);
 router.get("/recruiter/:recruiterId", isAuthorizedUser, getJobsByRecruiter);
 router.put("/update/:jobId", isAuthorizedUser, updateJob);

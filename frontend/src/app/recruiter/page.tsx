@@ -51,6 +51,7 @@ import {
   Building2,
   Settings,
   Phone,
+  Trash2,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -122,6 +123,9 @@ function RecruiterDashboardContent() {
   const [hasCompany, setHasCompany] = useState(false); 
   const [companyInfo, setCompanyInfo] = useState<any | null>(null);
   const [isCompanyLoading, setIsCompanyLoading] = useState(true);
+
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [jobToDelete, setJobToDelete] = useState<any | null>(null);
 
   useEffect(() => {
     if (!user) {
@@ -280,6 +284,10 @@ function RecruiterDashboardContent() {
         toast.error("Please register your company first");
         return;
       }
+      if (companyInfo.status !== "Verified") {
+        toast.error(`Your company is ${companyInfo.status || "Pending"}. You cannot post jobs until it is Verified.`);
+        return;
+      }
 
       if (editingJob) {
         const payload = { ...jobData };
@@ -380,6 +388,13 @@ function RecruiterDashboardContent() {
                   <>
                     <Building2 className="h-4 w-4" />
                     <span className="font-medium text-foreground">{companyInfo.name}</span>
+                    <Badge variant="outline" className={`ml-2 text-xs ${
+                        companyInfo.status === 'Verified' ? 'border-green-500 text-green-600' :
+                        companyInfo.status === 'Suspended' ? 'border-red-500 text-red-600' :
+                        'border-yellow-500 text-yellow-600'
+                      }`}>
+                      {companyInfo.status || "Pending"}
+                    </Badge>
                     <button 
                       onClick={() => setIsRegisterCompanyOpen(true)}
                       className="ml-2 p-1 rounded-full hover:bg-secondary transition-colors text-muted-foreground hover:text-primary"
@@ -397,6 +412,10 @@ function RecruiterDashboardContent() {
               size="lg"
               disabled={!hasCompany}
               onClick={() => {
+                if (companyInfo && companyInfo.status !== "Verified") {
+                  toast.error(`Your company is ${companyInfo.status || "Pending"}. You cannot post jobs until it is Verified.`);
+                  return;
+                }
                 setEditingJob(null);
                 setIsPostJobOpen(true);
               }}
@@ -602,7 +621,10 @@ function RecruiterDashboardContent() {
                                   </DropdownMenuItem>
                                   <DropdownMenuItem
                                     className="text-destructive"
-                                    onClick={() => handleDeleteJob(job._id || job.id)}
+                                    onClick={() => {
+                                      setJobToDelete(job);
+                                      setIsDeleteModalOpen(true);
+                                    }}
                                   >
                                     Delete
                                   </DropdownMenuItem>
@@ -800,6 +822,47 @@ function RecruiterDashboardContent() {
               </div>
             </TabsContent>
           </Tabs>
+
+      {/* Delete Job Confirmation Modal */}
+      {isDeleteModalOpen && jobToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="p-6 text-center">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-100 mb-4">
+                <Trash2 className="h-6 w-6 text-red-600" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Delete Job Posting</h3>
+              <p className="text-sm text-gray-500 mb-6">
+                Are you sure you want to delete the job <span className="font-semibold text-gray-900">"{jobToDelete.title}"</span>? 
+                This action cannot be undone.
+              </p>
+              
+              <div className="flex gap-3">
+                <button 
+                  onClick={() => {
+                    setIsDeleteModalOpen(false);
+                    setJobToDelete(null);
+                  }}
+                  className="flex-1 px-4 py-2 border border-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={() => {
+                    handleDeleteJob(jobToDelete._id || jobToDelete.id);
+                    setIsDeleteModalOpen(false);
+                    setJobToDelete(null);
+                  }}
+                  className="flex-1 px-4 py-2 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 transition-colors shadow-sm"
+                >
+                  Delete Job
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
         </div>
       </main>
     <Footer />

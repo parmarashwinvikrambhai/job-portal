@@ -76,8 +76,8 @@ export const getJobApplications = async (req: Request, res: Response) => {
       return res.status(404).json({ message: "Job not found" });
     }
 
-    // Only recruiter who created the job can see applications
-    if (job.createdBy.toString() !== userId) {
+    // Only recruiter who created the job or admin can see applications
+    if (job.createdBy.toString() !== userId && (req as any).user.role !== "admin") {
       return res.status(403).json({ message: "Not authorized to view applications for this job" });
     }
 

@@ -1,26 +1,24 @@
 "use client";
 
-import { useState } from "react";
-import { Search, Eye, Trash2, X, Building2, Edit2 } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Search, Eye, Trash2, X, Building2, Edit2, Loader2 } from "lucide-react";
+import api from "@/utils/axios";
+import toast from "react-hot-toast";
 
 type Company = {
-  id: string;
+  _id: string;
   name: string;
   industry: string;
   location: string;
   jobsPosted: number;
   status: string;
-  joinedAt: string;
+  createdAt: string;
 };
 
 export default function AdminCompaniesPage() {
-  // Dummy Companies Data
-  const [companies, setCompanies] = useState<Company[]>([
-    { id: "C1", name: "TechCorp Inc.", industry: "Technology", location: "San Francisco, CA", jobsPosted: 12, status: "Verified", joinedAt: "Oct 15, 2023" },
-    { id: "C2", name: "DesignStudio", industry: "Design", location: "New York, NY", jobsPosted: 4, status: "Verified", joinedAt: "Nov 02, 2023" },
-    { id: "C3", name: "DataFlow", industry: "Data Science", location: "Remote", jobsPosted: 8, status: "Pending", joinedAt: "Jan 10, 2024" },
-    { id: "C4", name: "Innovate LLC", industry: "Manufacturing", location: "Chicago, IL", jobsPosted: 2, status: "Suspended", joinedAt: "Feb 22, 2024" },
-  ]);
+  const [companies, setCompanies] = useState<Company[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [search, setSearch] = useState("");
 
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [companyToDelete, setCompanyToDelete] = useState<Company | null>(null);
@@ -30,6 +28,22 @@ export default function AdminCompaniesPage() {
 
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [companyToEdit, setCompanyToEdit] = useState<Company | null>(null);
+
+  useEffect(() => {
+    fetchCompanies();
+  }, []);
+
+  const fetchCompanies = async () => {
+    setIsLoading(true);
+    try {
+      const response = await api.get('/api/company/admin/all');
+      setCompanies(response.data.companies || []);
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Failed to fetch companies");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const openDeleteModal = (company: Company) => {
     setCompanyToDelete(company);
@@ -52,7 +66,7 @@ export default function AdminCompaniesPage() {
   };
 
   const openEditModal = (company: Company) => {
-    setCompanyToEdit(company);
+    setCompanyToEdit({ ...company });
     setIsEditModalOpen(true);
   };
 
@@ -61,19 +75,39 @@ export default function AdminCompaniesPage() {
     setCompanyToEdit(null);
   };
 
-  const handleSaveChanges = (e: React.FormEvent) => {
+  const handleSaveChanges = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!companyToEdit) return;
 
-    setCompanies(companies.map(c => c.id === companyToEdit.id ? companyToEdit : c));
-    closeEditModal();
+    try {
+      const formData = new FormData();
+      formData.append("status", companyToEdit.status);
+
+      await api.put(`/api/company/update/${companyToEdit._id}`, formData);
+      toast.success("Company status updated");
+      fetchCompanies();
+      closeEditModal();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Failed to update company");
+    }
   };
 
-  const handleDeleteCompany = () => {
+  const handleDeleteCompany = async () => {
     if (!companyToDelete) return;
-    setCompanies(companies.filter(c => c.id !== companyToDelete.id));
-    closeDeleteModal();
+    try {
+      await api.delete(`/api/company/${companyToDelete._id}`);
+      toast.success("Company deleted successfully");
+      fetchCompanies();
+      closeDeleteModal();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Failed to delete company");
+    }
   };
+
+  const filteredCompanies = companies.filter(company => 
+    company.name.toLowerCase().includes(search.toLowerCase()) ||
+    company.industry?.toLowerCase().includes(search.toLowerCase())
+  );
 
   return (
     <div className="space-y-6">
@@ -86,6 +120,8 @@ export default function AdminCompaniesPage() {
           <input 
             type="text" 
             placeholder="Search companies..." 
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
             className="pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-64"
           />
         </div>
@@ -93,80 +129,90 @@ export default function AdminCompaniesPage() {
 
       {/* Companies Table */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm text-left">
-            <thead className="text-xs text-gray-500 uppercase font-medium bg-gray-50/50 border-b border-gray-100">
-              <tr>
-                <th className="px-6 py-4">Company Name</th>
-                <th className="px-6 py-4">Industry & Location</th>
-                <th className="px-6 py-4 text-center">Jobs Posted</th>
-                <th className="px-6 py-4">Status</th>
-                <th className="px-6 py-4">Registered On</th>
-                <th className="px-6 py-4 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {companies.map((company) => (
-                <tr key={company.id} className="hover:bg-gray-50/50 transition-colors">
-                  <td className="px-6 py-4 font-medium text-gray-900">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-md bg-gray-100 flex items-center justify-center shrink-0">
-                        <Building2 className="w-4 h-4 text-gray-500" />
-                      </div>
-                      {company.name}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <p className="text-gray-900">{company.industry}</p>
-                    <p className="text-xs text-gray-500">{company.location}</p>
-                  </td>
-                  <td className="px-6 py-4 text-center font-medium text-gray-600">
-                    {company.jobsPosted}
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      company.status === "Verified" ? "bg-green-100 text-green-700" : 
-                      company.status === "Pending" ? "bg-yellow-100 text-yellow-700" : 
-                      "bg-red-100 text-red-700"
-                    }`}>
-                      {company.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-gray-500">{company.joinedAt}</td>
-                  <td className="px-6 py-4 text-right space-x-2">
-                    <button 
-                      onClick={() => openViewModal(company)}
-                      className="p-1.5 text-gray-400 hover:text-blue-600 transition-colors" 
-                      title="View Details"
-                    >
-                      <Eye className="w-4 h-4" />
-                    </button>
-                    <button 
-                      onClick={() => openEditModal(company)}
-                      className="p-1.5 text-gray-400 hover:text-blue-600 transition-colors" 
-                      title="Edit Status"
-                    >
-                      <Edit2 className="w-4 h-4" />
-                    </button>
-                    <button 
-                      onClick={() => openDeleteModal(company)}
-                      className="p-1.5 text-gray-400 hover:text-red-600 transition-colors" 
-                      title="Remove Company"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-              {companies.length === 0 && (
+        <div className="overflow-x-auto min-h-[400px]">
+          {isLoading ? (
+            <div className="flex flex-col items-center justify-center py-20">
+              <Loader2 className="w-10 h-10 text-blue-500 animate-spin mb-4" />
+              <p className="text-gray-500 font-medium">Loading companies...</p>
+            </div>
+          ) : filteredCompanies.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-20 text-center">
+              <p className="text-gray-500 font-medium">No companies found</p>
+            </div>
+          ) : (
+            <table className="w-full text-sm text-left">
+              <thead className="text-xs text-gray-500 uppercase font-medium bg-gray-50/50 border-b border-gray-100">
                 <tr>
-                   <td colSpan={6} className="px-6 py-8 text-center text-gray-500">
-                      No companies found.
-                   </td>
+                  <th className="px-6 py-4">Company Name</th>
+                  <th className="px-6 py-4">Industry & Location</th>
+                  <th className="px-6 py-4 text-center">Jobs Posted</th>
+                  <th className="px-6 py-4">Status</th>
+                  <th className="px-6 py-4">Registered On</th>
+                  <th className="px-6 py-4 text-right">Actions</th>
                 </tr>
-              )}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {filteredCompanies.map((company) => (
+                  <tr key={company._id} className="hover:bg-gray-50/50 transition-colors">
+                    <td className="px-6 py-4 font-medium text-gray-900">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-md bg-gray-100 flex items-center justify-center shrink-0">
+                          <Building2 className="w-4 h-4 text-gray-500" />
+                        </div>
+                        {company.name}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <p className="text-gray-900">{company.industry || "Unknown"}</p>
+                      <p className="text-xs text-gray-500">{company.location}</p>
+                    </td>
+                    <td className="px-6 py-4 text-center font-medium text-gray-600">
+                      {company.jobsPosted || 0}
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        company.status === "Verified" ? "bg-green-100 text-green-700" : 
+                        company.status === "Pending" ? "bg-yellow-100 text-yellow-700" : 
+                        "bg-red-100 text-red-700"
+                      }`}>
+                        {company.status}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-gray-500">
+                      {new Date(company.createdAt).toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                      })}
+                    </td>
+                    <td className="px-6 py-4 text-right space-x-2">
+                      <button 
+                        onClick={() => openViewModal(company)}
+                        className="p-1.5 text-gray-400 hover:text-blue-600 transition-colors" 
+                        title="View Details"
+                      >
+                        <Eye className="w-4 h-4" />
+                      </button>
+                      <button 
+                        onClick={() => openEditModal(company)}
+                        className="p-1.5 text-gray-400 hover:text-blue-600 transition-colors" 
+                        title="Edit Status"
+                      >
+                        <Edit2 className="w-4 h-4" />
+                      </button>
+                      <button 
+                        onClick={() => openDeleteModal(company)}
+                        className="p-1.5 text-gray-400 hover:text-red-600 transition-colors" 
+                        title="Remove Company"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
 
@@ -181,7 +227,7 @@ export default function AdminCompaniesPage() {
                  </div>
                  <div>
                     <h3 className="text-xl font-bold text-gray-900">{selectedCompany.name}</h3>
-                    <p className="text-sm text-gray-500">{selectedCompany.industry}</p>
+                    <p className="text-sm text-gray-500">{selectedCompany.industry || "Unknown"}</p>
                  </div>
               </div>
               <button onClick={closeViewModal} className="text-gray-400 hover:text-gray-600">
@@ -209,18 +255,20 @@ export default function AdminCompaniesPage() {
                         </div>
                         <div>
                             <p className="text-xs text-gray-500 mb-1">Registered Since</p>
-                            <p className="text-sm font-medium text-gray-900">{selectedCompany.joinedAt}</p>
+                            <p className="text-sm font-medium text-gray-900">
+                              {new Date(selectedCompany.createdAt).toLocaleDateString()}
+                            </p>
                         </div>
                         <div>
                             <p className="text-xs text-gray-500 mb-1">Total Active Jobs</p>
-                            <p className="text-sm font-medium text-gray-900">{selectedCompany.jobsPosted} Positions</p>
+                            <p className="text-sm font-medium text-gray-900">{selectedCompany.jobsPosted || 0} Positions</p>
                         </div>
                     </div>
                 </div>
 
                 <div className="p-4 border border-blue-100 bg-blue-50/50 rounded-lg">
                     <p className="text-sm text-blue-800">
-                        <strong>Admin Note:</strong> This is a {selectedCompany.status.toLowerCase()} employer profile. Ensure all required compliance documents are reviewed before verifying new listings.
+                        <strong>Admin Note:</strong> This is a {selectedCompany.status?.toLowerCase()} employer profile. Ensure all required compliance documents are reviewed before verifying new listings.
                     </p>
                 </div>
             </div>
@@ -248,7 +296,7 @@ export default function AdminCompaniesPage() {
               <h3 className="text-lg font-semibold text-gray-900 mb-2">Remove Company Account</h3>
               <p className="text-sm text-gray-500 mb-6">
                 Are you sure you want to completely remove <span className="font-semibold text-gray-900">"{companyToDelete.name}"</span>? 
-                This will also delete their <strong>{companyToDelete.jobsPosted} active job postings</strong> and all associated data.
+                This will also delete their <strong>{companyToDelete.jobsPosted || 0} active job postings</strong> and all associated data.
               </p>
               
               <div className="flex gap-3">
@@ -292,7 +340,7 @@ export default function AdminCompaniesPage() {
                  </div>
                  <div>
                     <p className="text-sm font-medium text-gray-900">{companyToEdit.name}</p>
-                    <p className="text-xs text-gray-500">{companyToEdit.industry} • {companyToEdit.location}</p>
+                    <p className="text-xs text-gray-500">{companyToEdit.industry || "Unknown"} • {companyToEdit.location}</p>
                  </div>
               </div>
 
@@ -324,7 +372,8 @@ export default function AdminCompaniesPage() {
                 </button>
                 <button 
                   type="submit" 
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                  disabled={!companyToEdit || companyToEdit.status === companies.find(c => c._id === companyToEdit?._id)?.status}
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
                 >
                   Save Status
                 </button>

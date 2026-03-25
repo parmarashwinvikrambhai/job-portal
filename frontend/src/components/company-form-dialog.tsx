@@ -148,7 +148,7 @@ export function CompanyFormDialog({
             <div className="relative group">
               <div className="h-24 w-24 rounded-xl border-2 border-dashed border-muted-foreground/25 flex items-center justify-center overflow-hidden bg-muted/50 group-hover:border-primary/50 transition-colors">
                 {logoPreview ? (
-                  <img src={logoPreview.startsWith('data:') || logoPreview.startsWith('http') ? logoPreview : `http://localhost:4000${logoPreview}`} alt="Logo preview" className="h-full w-full object-cover" />
+                  <img src={logoPreview.startsWith('data:') || logoPreview.startsWith('http') ? logoPreview : `${process.env.NEXT_PUBLIC_API_URL}${logoPreview}`} alt="Logo preview" className="h-full w-full object-cover" />
                 ) : (
                   <Building2 className="h-10 w-10 text-muted-foreground/50" />
                 )}
