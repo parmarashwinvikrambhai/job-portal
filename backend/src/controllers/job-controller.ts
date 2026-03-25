@@ -229,7 +229,7 @@ export const toggleSaveJob = async (req: Request, res: Response) => {
   }
 };
 
-import fs from "fs";
+
 
 export const getGlobalStats = async (req: Request, res: Response) => {
   try {
@@ -237,8 +237,7 @@ export const getGlobalStats = async (req: Request, res: Response) => {
     const companiesCount = await Company.countDocuments();
     const jobSeekersCount = await User.countDocuments({ role: "jobseeker" });
 
-    const logMessage = `Stats Debug at ${new Date().toISOString()}: ${JSON.stringify({ activeJobsCount, companiesCount, jobSeekersCount })}\n`;
-    fs.appendFileSync("./stats_debug.log", logMessage);
+
 
     res.status(200).json({
       stats: {
@@ -248,8 +247,7 @@ export const getGlobalStats = async (req: Request, res: Response) => {
       },
     });
   } catch (error) {
-    const errorLog = `Stats Error at ${new Date().toISOString()}: ${error}\n`;
-    fs.appendFileSync("./stats_debug.log", errorLog);
+
     return res.status(500).json({ message: "Internal Server Error" });
   }
 };
