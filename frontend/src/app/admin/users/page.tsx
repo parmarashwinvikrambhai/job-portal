@@ -12,6 +12,7 @@ type User = {
   role: string;
   status: string;
   createdAt: string;
+  companyName?: string;
 };
 
 export default function AdminUsersPage() {
@@ -134,6 +135,7 @@ export default function AdminUsersPage() {
                   <th className="px-6 py-4">Name</th>
                   <th className="px-6 py-4">Email</th>
                   <th className="px-6 py-4">Role</th>
+                  <th className="px-6 py-4">Company</th>
                   <th className="px-6 py-4">Status</th>
                   <th className="px-6 py-4">Joined</th>
                   <th className="px-6 py-4 text-right">Actions</th>
@@ -152,6 +154,9 @@ export default function AdminUsersPage() {
                       }`}>
                         {user.role}
                       </span>
+                    </td>
+                    <td className="px-6 py-4 text-xs font-medium text-gray-400 italic">
+                      {user.role === "recruiter" ? (user.companyName || "No Company") : "-"}
                     </td>
                     <td className="px-6 py-4">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium uppercase tracking-wider ${

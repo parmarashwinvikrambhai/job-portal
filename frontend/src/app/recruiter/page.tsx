@@ -524,18 +524,12 @@ function RecruiterDashboardContent() {
                   {recruiterJobsList.length === 0 ? (
                     <div className="text-center py-12">
                       <Briefcase className="h-12 w-12 mx-auto mb-3 text-muted-foreground/50" />
-                      <p className="text-muted-foreground mb-4">
+                      <p className="text-lg font-medium text-muted-foreground">
                         No job listings yet
                       </p>
-                      <Button
-                        onClick={() => {
-                          setEditingJob(null);
-                          setIsPostJobOpen(true);
-                        }}
-                      >
-                        <Plus className="mr-2 h-4 w-4" />
-                        Post Your First Job
-                      </Button>
+                      <p className="text-sm text-muted-foreground/70 mt-1 max-w-xs mx-auto">
+                        You haven't posted any jobs yet. Use the "Post New Job" button above to get started.
+                      </p>
                     </div>
                   ) : (
                     <div className="space-y-4">

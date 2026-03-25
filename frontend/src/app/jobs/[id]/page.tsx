@@ -12,7 +12,7 @@ import { Separator } from "@/components/ui/separator";
 import {
   Building2,
   MapPin,
-  DollarSign,
+  IndianRupee,
   Clock,
   Briefcase,
   Globe,
@@ -108,7 +108,7 @@ export default function JobDetailPage({
     );
   }
 
-  const salaryDisplay = `${job.salary?.min?.toLocaleString()} - ${job.salary?.max?.toLocaleString()} ${job.salary?.currency}`;
+  const salaryDisplay = `₹${job.salary?.min?.toLocaleString()} - ₹${job.salary?.max?.toLocaleString()}`;
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -157,7 +157,7 @@ export default function JobDetailPage({
                           {job.location}
                         </span>
                         <span className="flex items-center gap-1.5">
-                          <DollarSign className="h-4 w-4" />
+                          <IndianRupee className="h-4 w-4" />
                           {salaryDisplay}
                         </span>
                         <span className="flex items-center gap-1.5">

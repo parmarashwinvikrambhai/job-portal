@@ -1,4 +1,5 @@
 import type { Request, Response } from "express";
+import jwt, { type JwtPayload } from "jsonwebtoken";
 import Job from "../models/job-model";
 import { ZodError } from "zod";
 import { jobSchema, updateJobSchema } from "../validators/job-validator";
@@ -67,6 +68,19 @@ export const getAllJobs = async (req: Request, res: Response) => {
   try {
     const { keyword, location } = req.query;
     const query: any = { status: "open" };
+
+    // If recruiter is logged in, show only their jobs
+    const token = req.cookies?.token || req.header("Authorization")?.replace("Bearer ", "");
+    if (token) {
+      try {
+        const decode = jwt.verify(token, process.env.JWT_SECRET!) as JwtPayload;
+        if (decode.role === "recruiter") {
+          query.createdBy = decode.id;
+        }
+      } catch (error) {
+        // Ignore invalid token for public listing
+      }
+    }
 
     if (keyword) {
       query.$or = [

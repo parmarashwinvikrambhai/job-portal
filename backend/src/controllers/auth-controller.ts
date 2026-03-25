@@ -4,6 +4,7 @@ import { ZodError } from "zod";
 import { loginSchema, registerSchema, updateProfileSchema } from "../validators/user-validator";
 import bcrypt from "bcrypt";
 import User from "../models/user-model";
+import Company from "../models/company-model";
 import jwt from "jsonwebtoken";
 
 export const createUser = async (req: Request, res: Response) => {
@@ -194,7 +195,25 @@ export const getAllUsers = async (req: Request, res: Response) => {
     }
 
     const users = await User.find(query).select("-password");
-    res.status(200).json({ users });
+
+    // For recruiters, add their company name
+    const usersWithCompany = await Promise.all(
+      users.map(async (user) => {
+        const userData = user.toObject();
+        if (userData.role === "recruiter") {
+          // Check if user has a company string in their profile first
+          if (userData.company) {
+            return { ...userData, companyName: userData.company };
+          }
+          // Fallback to Company collection
+          const company = await Company.findOne({ recruiterId: userData._id });
+          return { ...userData, companyName: company?.name || "No Company" };
+        }
+        return userData;
+      })
+    );
+
+    res.status(200).json({ users: usersWithCompany });
   } catch (error) {
     console.error("Get All Users Error:", error);
     res.status(500).json({ message: "Internal server error" });

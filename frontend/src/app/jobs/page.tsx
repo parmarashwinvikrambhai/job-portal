@@ -51,6 +51,7 @@ export default function JobsPage() {
   const dispatch = useDispatch();
   const searchParams = useSearchParams();
   const { jobs } = useSelector((state: RootState) => state.jobs);
+  const { user } = useSelector((state: RootState) => state.auth);
   
   const [searchQuery, setSearchQuery] = useState(searchParams.get("keyword") || "");
   const [location, setLocation] = useState(searchParams.get("location") || "");
@@ -258,7 +259,9 @@ export default function JobsPage() {
               <div className="flex-1">
                 <div className="flex items-center justify-between mb-6">
                   <div>
-                    <h1 className="text-2xl font-bold">All Jobs</h1>
+                    <h1 className="text-2xl font-bold">
+                      {user?.role === "recruiter" ? "My Posted Jobs" : "All Jobs"}
+                    </h1>
                     <p className="text-muted-foreground mt-1">
                       {jobs.length} jobs found
                     </p>
@@ -281,25 +284,41 @@ export default function JobsPage() {
                 </div>
 
                 <div className="space-y-4">
-                  {jobs.map((job) => (
-                    <JobCard key={job.id} job={job} />
-                  ))}
-                </div>
+                  {jobs.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-20 bg-background rounded-xl border border-dashed border-border">
+                      <div className="h-16 w-16 bg-muted rounded-full flex items-center justify-center mb-4">
+                        <Search className="h-8 w-8 text-muted-foreground" />
+                      </div>
+                      <h3 className="text-xl font-semibold">No jobs found</h3>
+                      <p className="text-muted-foreground mt-2 max-w-xs text-center">
+                        {user?.role === "recruiter" 
+                          ? "You haven't posted any jobs yet. Start by creating a new job posting."
+                          : "We couldn't find any jobs matching your criteria. Try adjusting your filters or search terms."}
+                      </p>
+                    </div>
+                  ) : (
+                    <>
+                      {jobs.map((job) => (
+                        <JobCard key={job.id} job={job} />
+                      ))}
 
-                {/* Pagination */}
-                <div className="mt-8 flex justify-center gap-2">
-                  <Button variant="outline" disabled>
-                    Previous
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="bg-primary text-primary-foreground hover:bg-primary/90"
-                  >
-                    1
-                  </Button>
-                  <Button variant="outline">2</Button>
-                  <Button variant="outline">3</Button>
-                  <Button variant="outline">Next</Button>
+                      {/* Pagination */}
+                      <div className="mt-8 flex justify-center gap-2">
+                        <Button variant="outline" disabled>
+                          Previous
+                        </Button>
+                        <Button
+                          variant="outline"
+                          className="bg-primary text-primary-foreground hover:bg-primary/90"
+                        >
+                          1
+                        </Button>
+                        <Button variant="outline">2</Button>
+                        <Button variant="outline">3</Button>
+                        <Button variant="outline">Next</Button>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
