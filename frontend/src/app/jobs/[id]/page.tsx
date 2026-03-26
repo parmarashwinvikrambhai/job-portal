@@ -101,7 +101,7 @@ export default function JobDetailPage({
         <div className="flex-1 flex flex-col items-center justify-center gap-4">
           <Briefcase className="h-16 w-16 text-muted-foreground/50" />
           <h2 className="text-2xl font-bold">Job Not Found</h2>
-          <Button onClick={() => router.push("/jobs")}>Back to Jobs</Button>
+          <Button onClick={() => router.back()}>Back to Jobs</Button>
         </div>
         <Footer />
       </div>
@@ -117,13 +117,13 @@ export default function JobDetailPage({
       <main className="flex-1 bg-muted/30">
         <div className="border-b border-border bg-background">
           <div className="container mx-auto px-4 py-4">
-            <Link
-              href="/jobs"
+            <button
+              onClick={() => router.back()}
               className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
               <ArrowLeft className="mr-2 h-4 w-4" />
               Back to Jobs
-            </Link>
+            </button>
           </div>
         </div>
 

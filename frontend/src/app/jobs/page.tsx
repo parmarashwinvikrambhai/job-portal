@@ -29,7 +29,7 @@ import { useSelector, useDispatch } from "react-redux";
 import { RootState } from "@/lib/store";
 import { setAllJobs } from "@/lib/features/jobs/jobs-slice";
 import { Job } from "@/components/job-card";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 
 const jobTypes = ["Full-time", "Part-time", "Contract", "Remote"];
 const experienceLevels = [
@@ -39,28 +39,50 @@ const experienceLevels = [
   "Lead",
   "Executive",
 ];
-const salaryRanges = [
-  "$50k - $80k",
-  "$80k - $120k",
-  "$120k - $160k",
-  "$160k - $200k",
-  "$200k+",
-];
 
 export default function JobsPage() {
   const dispatch = useDispatch();
   const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
   const { jobs } = useSelector((state: RootState) => state.jobs);
   const { user } = useSelector((state: RootState) => state.auth);
   
   const [searchQuery, setSearchQuery] = useState(searchParams.get("keyword") || "");
   const [location, setLocation] = useState(searchParams.get("location") || "");
-  const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
-  const [selectedExperience, setSelectedExperience] = useState<string[]>([]);
-  const [selectedSalary, setSelectedSalary] = useState("");
 
-  const fetchJobs = async (params = {}) => {
+  const selectedTypes = searchParams.get("jobType")?.split(",").filter(Boolean) || [];
+  const selectedExperience = searchParams.get("experience")?.split(",").filter(Boolean) || [];
+  const selectedSort = searchParams.get("sort") || "recent";
+
+  const updateURL = (newParams: Record<string, string | null>) => {
+    const params = new URLSearchParams(searchParams.toString());
+    Object.entries(newParams).forEach(([key, value]) => {
+      if (value) params.set(key, value);
+      else params.delete(key);
+    });
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  };
+
+  const fetchJobs = async () => {
     try {
+      const params: any = {
+        keyword: searchQuery,
+        location: location,
+      };
+
+      if (selectedTypes.length > 0) {
+        params.jobType = selectedTypes.join(",");
+      }
+
+      if (selectedExperience.length > 0) {
+        params.experience = selectedExperience.join(",");
+      }
+
+      if (selectedSort) {
+        params.sort = selectedSort;
+      }
+
       const response = await api.get("/api/jobs", { params });
       if (response.data.jobs) {
         dispatch(setAllJobs(response.data.jobs));
@@ -71,15 +93,20 @@ export default function JobsPage() {
   };
 
   useEffect(() => {
+    fetchJobs();
+  }, [searchParams]);
+
+  useEffect(() => {
     const keyword = searchParams.get("keyword") || "";
     const loc = searchParams.get("location") || "";
-    fetchJobs({ keyword, location: loc });
+    if (keyword !== searchQuery) setSearchQuery(keyword);
+    if (loc !== location) setLocation(loc);
   }, [searchParams]);
 
   const handleSearch = () => {
-    fetchJobs({
-      keyword: searchQuery,
-      location: location,
+    updateURL({
+      keyword: searchQuery || null,
+      location: location || null,
     });
   };
 
@@ -90,25 +117,34 @@ export default function JobsPage() {
   };
 
   const toggleType = (type: string) => {
-    setSelectedTypes((prev) =>
-      prev.includes(type) ? prev.filter((t) => t !== type) : [...prev, type],
-    );
+    const newTypes = selectedTypes.includes(type)
+      ? selectedTypes.filter((t) => t !== type)
+      : [...selectedTypes, type];
+    updateURL({ jobType: newTypes.length > 0 ? newTypes.join(",") : null });
   };
 
   const toggleExperience = (level: string) => {
-    setSelectedExperience((prev) =>
-      prev.includes(level) ? prev.filter((l) => l !== level) : [...prev, level],
-    );
+    const newExp = selectedExperience.includes(level)
+      ? selectedExperience.filter((l) => l !== level)
+      : [...selectedExperience, level];
+    updateURL({ experience: newExp.length > 0 ? newExp.join(",") : null });
   };
 
   const clearFilters = () => {
-    setSelectedTypes([]);
-    setSelectedExperience([]);
-    setSelectedSalary("");
+    updateURL({
+      jobType: null,
+      experience: null,
+      salary: null, // Still clear for safety if it exists in URL
+      sort: null,
+      keyword: null,
+      location: null,
+    });
+    setSearchQuery("");
+    setLocation("");
   };
 
   const hasFilters =
-    selectedTypes.length > 0 || selectedExperience.length > 0 || selectedSalary;
+    selectedTypes.length > 0 || selectedExperience.length > 0;
 
   const FilterContent = () => (
     <div className="space-y-6">
@@ -155,24 +191,6 @@ export default function JobsPage() {
           ))}
         </div>
       </div>
-
-      {/* Salary Range */}
-      <div>
-        <h3 className="font-semibold mb-3">Salary Range</h3>
-        <Select value={selectedSalary} onValueChange={setSelectedSalary}>
-          <SelectTrigger>
-            <SelectValue placeholder="Select range" />
-          </SelectTrigger>
-          <SelectContent>
-            {salaryRanges.map((range) => (
-              <SelectItem key={range} value={range}>
-                {range}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
       {hasFilters && (
         <Button variant="outline" onClick={clearFilters} className="w-full">
           <X className="mr-2 h-4 w-4" />
@@ -266,7 +284,7 @@ export default function JobsPage() {
                       {jobs.length} jobs found
                     </p>
                   </div>
-                  <Select defaultValue="recent">
+                  <Select value={selectedSort} onValueChange={(val) => updateURL({ sort: val })}>
                     <SelectTrigger className="w-40">
                       <SelectValue />
                     </SelectTrigger>

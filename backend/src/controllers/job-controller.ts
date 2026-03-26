@@ -75,7 +75,7 @@ export const getJobsByRecruiter = async (req: Request, res: Response) => {
 
 export const getAllJobs = async (req: Request, res: Response) => {
   try {
-    const { keyword, location } = req.query;
+    const { keyword, location, jobType, experience, sort } = req.query;
     const query: any = { status: "open" };
 
     // If recruiter is logged in, show only their jobs
@@ -102,9 +102,37 @@ export const getAllJobs = async (req: Request, res: Response) => {
       query.location = { $regex: location as string, $options: "i" };
     }
 
+    if (jobType) {
+      const types = (jobType as string).split(",");
+      query.jobType = { $in: types.map((t) => t.toLowerCase()) };
+    }
+
+    if (experience) {
+      const expArray = (experience as string).split(",");
+      const mappedExp: string[] = [];
+      
+      expArray.forEach((exp) => {
+        if (exp === "Entry Level") mappedExp.push("fresher");
+        else if (exp === "Mid Level") mappedExp.push("1-2 years", "2-5 years");
+        else if (exp === "Senior") mappedExp.push("5-10 years");
+        else if (exp === "Lead" || exp === "Executive") mappedExp.push("10+ years");
+        else mappedExp.push(exp);
+      });
+
+      query.experience = { $in: mappedExp };
+    }
+
+
+    let sortOption: any = { createdAt: -1 };
+    if (sort === "salary-high") {
+      sortOption = { "salary.max": -1 };
+    } else if (sort === "salary-low") {
+      sortOption = { "salary.min": 1 };
+    }
+
     const jobs = await Job.find(query)
       .populate("company", "name logo")
-      .sort({ createdAt: -1 });
+      .sort(sortOption);
 
     res.status(200).json({ jobs });
   } catch (error) {

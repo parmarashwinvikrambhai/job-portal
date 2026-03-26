@@ -125,6 +125,7 @@ export const loginUser = async (req: Request, res: Response) => {
     });
   }
 };
+
 export const logoutUser = async (req: Request, res: Response) => {
   try {
     res.clearCookie("token", {
@@ -182,6 +183,7 @@ export const updateProfile = async (req: Request, res: Response) => {
     console.error("Update Profile Error:", error);
   }
 };
+
 export const getAllUsers = async (req: Request, res: Response) => {
   try {
     const currentAdminId = (req as any).user.id;

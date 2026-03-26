@@ -8,6 +8,7 @@ import authRoutes from "./routes/auth-route";
 import companyRoutes from "./routes/company-route";
 import jobRoutes from "./routes/job-route";
 import applicationRoutes from "./routes/application-route";
+import reportRoutes from "./routes/report-route";
 import path from "path";
 
 dotenv.config();
@@ -32,6 +33,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/company", companyRoutes);
 app.use("/api/jobs", jobRoutes);
 app.use("/api/applications", applicationRoutes);
+app.use("/api/reports", reportRoutes);
 
 app.listen(PORT, () => {
   console.log(`server Running on http://localhost:${PORT}`);
