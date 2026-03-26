@@ -5,6 +5,8 @@ import { loginSchema, registerSchema, updateProfileSchema } from "../validators/
 import bcrypt from "bcrypt";
 import User from "../models/user-model";
 import Company from "../models/company-model";
+import Job from "../models/job-model";
+import Application from "../models/application-model";
 import jwt from "jsonwebtoken";
 
 export const createUser = async (req: Request, res: Response) => {
@@ -250,5 +252,44 @@ export const deleteUserByAdmin = async (req: Request, res: Response) => {
   } catch (error) {
     console.error("Delete User By Admin Error:", error);
     res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+export const getAdminStats = async (req: Request, res: Response) => {
+  try {
+    const totalUsers = await User.countDocuments({ role: { $ne: "admin" } });
+    const activeJobs = await Job.countDocuments({ status: "open" });
+    const totalApplications = await Application.countDocuments();
+    const totalCompanies = await Company.countDocuments();
+
+    // Fetch recent users (last 5, excluding admins)
+    const recentUsers = await User.find({ role: { $ne: "admin" } })
+      .select("name email role createdAt")
+      .sort({ createdAt: -1 })
+      .limit(5);
+
+    // Fetch recent applications (last 5)
+    const recentApplications = await Application.find()
+      .populate("applicant", "name email")
+      .populate("job", "title")
+      .sort({ createdAt: -1 })
+      .limit(5);
+
+    res.status(200).json({
+      success: true,
+      stats: {
+        totalUsers,
+        activeJobs,
+        totalApplications,
+        totalCompanies,
+      },
+      recentActivity: {
+        users: recentUsers,
+        applications: recentApplications,
+      },
+    });
+  } catch (error) {
+    console.error("Get Admin Stats Error:", error);
+    res.status(500).json({ message: "Internal Server Error" });
   }
 };
