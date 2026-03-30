@@ -9,6 +9,8 @@ import {
   updateUserByAdmin,
   getAdminStats,
   changePassword,
+  forgotPassword,
+  resetPassword,
 } from "../controllers/auth-controller";
 import { isAdmin, isAuthorizedUser } from "../middleware/auth-middleware";
 
@@ -19,6 +21,10 @@ router.post("/login", loginUser);
 router.post("/logout", logoutUser);
 router.put("/profile", isAuthorizedUser, updateProfile);
 router.put("/change-password", isAuthorizedUser, changePassword);
+
+// Password Reset Routes
+router.post("/forgot-password", forgotPassword);
+router.put("/reset-password/:token", resetPassword);
 
 // Admin Routes
 router.get("/all-users", isAuthorizedUser, isAdmin, getAllUsers);

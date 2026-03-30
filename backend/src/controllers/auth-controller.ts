@@ -1,7 +1,9 @@
 import type { Request, Response } from "express";
 import userRepositories from "../repositories/auth-repositories";
 import { ZodError } from "zod";
-import { loginSchema, registerSchema, updateProfileSchema, changePasswordSchema } from "../validators/user-validator";
+import { loginSchema, registerSchema, updateProfileSchema, changePasswordSchema, forgotPasswordSchema, resetPasswordSchema } from "../validators/user-validator";
+import crypto from "crypto";
+import { sendEmail } from "../utils/sendEmail";
 import bcrypt from "bcrypt";
 import User from "../models/user-model";
 import Company from "../models/company-model";
@@ -327,5 +329,108 @@ export const changePassword = async (req: Request, res: Response) => {
           ? error.issues[0]?.message
           : "Internal server error...",
     });
+  }
+};
+
+export const forgotPassword = async (req: Request, res: Response) => {
+  try {
+    const validateData = forgotPasswordSchema.safeParse(req.body);
+    if (!validateData.success) {
+      return res.status(400).json({ message: validateData.error.issues[0]?.message });
+    }
+
+    const { email } = validateData.data;
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found with this email" });
+    }
+
+    // Generate a secure reset token
+    const resetToken = crypto.randomBytes(32).toString("hex");
+
+    // Hash token and save to database
+    const hashedToken = crypto.createHash("sha256").update(resetToken).digest("hex");
+    user.resetPasswordToken = hashedToken;
+    
+    // Set expire for 15 minutes
+    user.resetPasswordExpire = new Date(Date.now() + 15 * 60 * 1000);
+    await user.save();
+
+    // Create reset URL
+    const resetUrl = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
+
+    const message = `
+      You are receiving this email because you (or someone else) requested a password reset.
+      Please click on the following link, or paste this into your browser to complete the process:
+      
+      ${resetUrl}
+
+      If you did not request this, please ignore this email and your password will remain unchanged.
+    `;
+
+    try {
+      await sendEmail({
+        email: user.email,
+        subject: "Password Reset Request",
+        message,
+      });
+
+      res.status(200).json({ message: "Email sent successfully" });
+    } catch (error) {
+      console.error("Email Sending Error", error);
+      user.resetPasswordToken = undefined;
+      user.resetPasswordExpire = undefined;
+      await user.save();
+      return res.status(500).json({ message: "Email could not be sent" });
+    }
+
+  } catch (error) {
+    console.error("Forgot Password Error:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+export const resetPassword = async (req: Request, res: Response) => {
+  try {
+    const { token } = req.params;
+    
+    if (!token || typeof token !== "string") {
+      return res.status(400).json({ message: "Invalid token" });
+    }
+
+    const validateData = resetPasswordSchema.safeParse(req.body);
+    if (!validateData.success) {
+      return res.status(400).json({ message: validateData.error.issues[0]?.message });
+    }
+
+    const { password } = validateData.data;
+
+    // Hash the token from URL to match the one in DB
+    const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+
+    const user = await User.findOne({
+      resetPasswordToken: hashedToken,
+      resetPasswordExpire: { $gt: Date.now() },
+    });
+
+    if (!user) {
+      return res.status(400).json({ message: "Invalid or expired token" });
+    }
+
+    // Hash new password
+    const hashPassword = await bcrypt.hash(password, 10);
+    user.password = hashPassword;
+    
+    // Clear reset fields
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpire = undefined;
+
+    await user.save();
+
+    res.status(200).json({ message: "Password updated successfully" });
+  } catch (error) {
+    console.error("Reset Password Error:", error);
+    return res.status(500).json({ message: "Internal server error" });
   }
 };

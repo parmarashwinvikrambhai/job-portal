@@ -108,4 +108,19 @@ export const changePasswordSchema = z.object({
     .string({ message: "New password is required" })
     .min(6, "New password must be at least 6 characters long")
     .max(32, "New password cannot exceed 32 characters"),
+});
+
+export const forgotPasswordSchema = z.object({
+  email: z
+    .string({ message: "Email is required" })
+    .email("Please provide a valid email address")
+    .toLowerCase()
+    .trim(),
+});
+
+export const resetPasswordSchema = z.object({
+  password: z
+    .string({ message: "Password is required" })
+    .min(6, "Password must be at least 6 characters long")
+    .max(32, "Password cannot exceed 32 characters"),
 });
