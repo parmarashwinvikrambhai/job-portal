@@ -1,7 +1,7 @@
 import type { Request, Response } from "express";
 import userRepositories from "../repositories/auth-repositories";
 import { ZodError } from "zod";
-import { loginSchema, registerSchema, updateProfileSchema } from "../validators/user-validator";
+import { loginSchema, registerSchema, updateProfileSchema, changePasswordSchema } from "../validators/user-validator";
 import bcrypt from "bcrypt";
 import User from "../models/user-model";
 import Company from "../models/company-model";
@@ -293,5 +293,39 @@ export const getAdminStats = async (req: Request, res: Response) => {
   } catch (error) {
     console.error("Get Admin Stats Error:", error);
     res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
+export const changePassword = async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user.id;
+    const validateData = changePasswordSchema.safeParse(req.body);
+
+    if (!validateData.success) {
+      return res.status(400).json({
+        message: validateData.error.issues[0]?.message || "Validation Error",
+      });
+    }
+
+    const { newPassword } = validateData.data;
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const hashPassword = await bcrypt.hash(newPassword, 10);
+    user.password = hashPassword;
+    await user.save();
+
+    res.status(200).json({ message: "Password updated successfully" });
+  } catch (error) {
+    console.error("Change Password Error:", error);
+    return res.status(error instanceof ZodError ? 400 : 500).json({
+      message:
+        error instanceof ZodError
+          ? error.issues[0]?.message
+          : "Internal server error...",
+    });
   }
 };

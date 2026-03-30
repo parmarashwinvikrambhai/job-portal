@@ -8,6 +8,7 @@ import {
   updateProfile,
   updateUserByAdmin,
   getAdminStats,
+  changePassword,
 } from "../controllers/auth-controller";
 import { isAdmin, isAuthorizedUser } from "../middleware/auth-middleware";
 
@@ -17,6 +18,7 @@ router.post("/register", createUser);
 router.post("/login", loginUser);
 router.post("/logout", logoutUser);
 router.put("/profile", isAuthorizedUser, updateProfile);
+router.put("/change-password", isAuthorizedUser, changePassword);
 
 // Admin Routes
 router.get("/all-users", isAuthorizedUser, isAdmin, getAllUsers);

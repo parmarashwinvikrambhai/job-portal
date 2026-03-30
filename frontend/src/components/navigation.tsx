@@ -23,6 +23,7 @@ import {
   LayoutDashboard,
   Heart,
   Settings,
+  Key,
 } from "lucide-react";
 import { useSelector, useDispatch } from "react-redux";
 import { RootState, AppDispatch } from "@/lib/store";
@@ -154,9 +155,15 @@ export function Navigation() {
                   <p className="text-xs text-muted-foreground">{user.email}</p>
                 </div>
                 <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link href="/change-password" className="w-full cursor-pointer">
+                    <Key className="mr-2 h-4 w-4" />
+                    Change Password
+                  </Link>
+                </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={handleLogout}
-                  className="text-destructive focus:text-destructive"
+                  className="text-destructive focus:text-destructive cursor-pointer"
                 >
                   <LogOut className="mr-2 h-4 w-4" />
                   Log out
@@ -222,12 +229,19 @@ export function Navigation() {
                 >
                   Dashboard
                 </Link>
-                <button
-                  onClick={handleLogout}
-                  className="text-sm font-medium text-left text-destructive"
-                >
-                  Log out
-                </button>
+                  <Link
+                    href="/change-password"
+                    className="text-sm font-medium"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    Change Password
+                  </Link>
+                  <button
+                    onClick={handleLogout}
+                    className="text-sm font-medium text-left text-destructive"
+                  >
+                    Log out
+                  </button>
               </>
             ) : (
               <div className="mt-2 flex gap-2">

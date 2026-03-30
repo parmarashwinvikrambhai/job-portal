@@ -102,3 +102,10 @@ export const updateProfileSchema = z.object({
     .max(100, "Experience cannot exceed 100 characters")
     .optional(),
 });
+
+export const changePasswordSchema = z.object({
+  newPassword: z
+    .string({ message: "New password is required" })
+    .min(6, "New password must be at least 6 characters long")
+    .max(32, "New password cannot exceed 32 characters"),
+});
