@@ -112,7 +112,7 @@ function RecruiterDashboardContent() {
   const searchParams = useSearchParams();
   const dispatch = useDispatch();
   const { user } = useSelector((state: RootState) => state.auth);
-  const { recruiterJobsList } = useSelector((state: RootState) => state.jobs);
+  const { recruiterJobsList, recruiterPagination } = useSelector((state: RootState) => state.jobs);
 
   const [isPostJobOpen, setIsPostJobOpen] = useState(false);
   const [editingJob, setEditingJob] = useState<any | null>(null);
@@ -126,6 +126,8 @@ function RecruiterDashboardContent() {
 
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [jobToDelete, setJobToDelete] = useState<any | null>(null);
+
+  const [currentPage, setCurrentPage] = useState(parseInt(searchParams.get("page") || "1"));
 
   useEffect(() => {
     if (!user) {
@@ -187,12 +189,12 @@ function RecruiterDashboardContent() {
     }
   };
 
-  const fetchJobs = useCallback(async () => {
+  const fetchJobs = useCallback(async (page: number = 1) => {
     if (!user) return;
     try {
-      const response = await api.get(`/api/jobs/recruiter/${user.id}`);
+      const response = await api.get(`/api/jobs/recruiter/${user.id}?page=${page}&limit=4`);
       if (response.data.jobs) {
-        dispatch(setRecruiterJobs(response.data.jobs));
+        dispatch(setRecruiterJobs(response.data));
       }
     } catch (error) {
       console.error("Failed to fetch jobs", error);
@@ -218,10 +220,18 @@ function RecruiterDashboardContent() {
   useEffect(() => {
     if (user && user.role === "recruiter") {
       fetchCompany();
-      fetchJobs();
+      fetchJobs(currentPage);
       fetchApplicants();
     }
-  }, [user, fetchCompany, fetchJobs, fetchApplicants]);
+  }, [user, fetchCompany, fetchJobs, fetchApplicants, currentPage]);
+
+  const handlePageChange = (newPage: number) => {
+    setCurrentPage(newPage);
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("page", newPage.toString());
+    params.set("tab", activeTab);
+    router.push(`?${params.toString()}`, { scroll: false });
+  };
 
   const handleRegisterCompany = async (companyData: FormData) => {
     if (!user) return;
@@ -634,6 +644,41 @@ function RecruiterDashboardContent() {
                           </div>
                         );
                       })}
+
+                      {/* Pagination Controls */}
+                      {recruiterPagination && recruiterPagination.totalPages > 1 && (
+                        <div className="flex items-center justify-center gap-2 pt-6">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handlePageChange(currentPage - 1)}
+                            disabled={currentPage === 1}
+                          >
+                            Previous
+                          </Button>
+                          <div className="flex items-center gap-1">
+                            {Array.from({ length: recruiterPagination.totalPages }, (_, i) => i + 1).map((pageNum) => (
+                              <Button
+                                key={pageNum}
+                                variant={currentPage === pageNum ? "default" : "outline"}
+                                size="sm"
+                                className="w-9 h-9"
+                                onClick={() => handlePageChange(pageNum)}
+                              >
+                                {pageNum}
+                              </Button>
+                            ))}
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handlePageChange(currentPage + 1)}
+                            disabled={currentPage === recruiterPagination.totalPages}
+                          >
+                            Next
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   )}
                 </CardContent>

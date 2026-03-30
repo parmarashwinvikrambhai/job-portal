@@ -15,18 +15,32 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { useDispatch } from "react-redux";
-import { AppDispatch } from "@/lib/store";
+import { useDispatch, useSelector } from "react-redux";
+import { RootState, AppDispatch } from "@/lib/store";
 import { setUser } from "@/lib/features/auth/auth-slice";
 import { Briefcase, Eye, EyeOff, Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
 import api from "@/utils/axios";
+import { useEffect } from "react";
 
 export default function LoginPage() {
   const router = useRouter();
   const dispatch = useDispatch<AppDispatch>();
+  const { isAuthenticated, user } = useSelector((state: RootState) => state.auth);
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      if (user.role === "admin") {
+        router.replace("/admin");
+      } else if (user.role === "recruiter") {
+        router.replace("/recruiter");
+      } else {
+        router.replace("/dashboard");
+      }
+    }
+  }, [isAuthenticated, user, router]);
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -53,11 +67,11 @@ export default function LoginPage() {
         dispatch(setUser(user));
 
         if (user.role === "admin") {
-          router.push("/admin");
+          router.replace("/admin");
         } else if (user.role === "recruiter") {
-          router.push("/recruiter");
+          router.replace("/recruiter");
         } else {
-          router.push("/dashboard");
+          router.replace("/dashboard");
         }
       }
     } catch (error: any) {

@@ -5,19 +5,40 @@ import { Job } from "@/components/job-card";
 interface JobsState {
   jobs: Job[];
   recruiterJobsList: any[];
+  pagination: {
+    totalJobs: number;
+    totalPages: number;
+    currentPage: number;
+  };
+  recruiterPagination: {
+    totalJobs: number;
+    totalPages: number;
+    currentPage: number;
+  } | null;
 }
 
 const initialState: JobsState = {
   jobs: [],
   recruiterJobsList: [],
+  pagination: {
+    totalJobs: 0,
+    totalPages: 1,
+    currentPage: 1,
+  },
+  recruiterPagination: null,
 };
 
 const jobsSlice = createSlice({
   name: "jobs",
   initialState,
   reducers: {
-    setAllJobs: (state, action: PayloadAction<any[]>) => {
-      state.jobs = action.payload.map(job => ({
+    setAllJobs: (
+      state,
+      action: PayloadAction<any[] | { jobs: any[]; totalJobs?: number; totalPages?: number; currentPage?: number }>,
+    ) => {
+      const payload = Array.isArray(action.payload) ? { jobs: action.payload } : action.payload;
+
+      state.jobs = payload.jobs.map((job) => ({
         id: job._id,
         title: job.title,
         company: job.company?.name || "Unknown Company",
@@ -39,6 +60,10 @@ const jobsSlice = createSlice({
         description: job.description,
         experience: job.experience,
       }));
+
+      if (payload.totalJobs !== undefined) state.pagination.totalJobs = payload.totalJobs;
+      if (payload.totalPages !== undefined) state.pagination.totalPages = payload.totalPages;
+      if (payload.currentPage !== undefined) state.pagination.currentPage = payload.currentPage;
     },
     updateJob: (state, action: PayloadAction<Job>) => {
       const updatedJob = action.payload;
@@ -59,8 +84,18 @@ const jobsSlice = createSlice({
           : job,
       );
     },
-    setRecruiterJobs: (state, action: PayloadAction<any[]>) => {
-      state.recruiterJobsList = action.payload;
+    setRecruiterJobs: (state, action: PayloadAction<any[] | any>) => {
+      if (Array.isArray(action.payload)) {
+        state.recruiterJobsList = action.payload;
+        state.recruiterPagination = null;
+      } else {
+        state.recruiterJobsList = action.payload.jobs;
+        state.recruiterPagination = {
+          totalJobs: action.payload.totalJobs,
+          totalPages: action.payload.totalPages,
+          currentPage: action.payload.currentPage,
+        };
+      }
     },
     addJob: (state, action: PayloadAction<any>) => {
       const newJob = action.payload;

@@ -48,13 +48,22 @@ export const createJob = async (req: Request, res: Response) => {
 export const getJobsByRecruiter = async (req: Request, res: Response) => {
   try {
     const { recruiterId } = req.params;
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 4;
+    const skip = (page - 1) * limit;
+
     if (typeof recruiterId !== "string") {
       return res.status(400).json({ message: "Invalid recruiter ID" });
     }
 
+    const totalJobs = await Job.countDocuments({ createdBy: recruiterId });
+    const totalPages = Math.ceil(totalJobs / limit);
+
     const jobs = await Job.find({ createdBy: recruiterId })
       .populate("company", "name logo")
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
 
     const jobsWithCount = await Promise.all(
       jobs.map(async (job) => {
@@ -66,7 +75,12 @@ export const getJobsByRecruiter = async (req: Request, res: Response) => {
       })
     );
 
-    res.status(200).json({ jobs: jobsWithCount });
+    res.status(200).json({
+      jobs: jobsWithCount,
+      totalJobs,
+      totalPages,
+      currentPage: page,
+    });
   } catch (error) {
     console.error("Get Jobs Error:", error);
     return res.status(500).json({ message: "Internal Server Error" });
@@ -75,8 +89,12 @@ export const getJobsByRecruiter = async (req: Request, res: Response) => {
 
 export const getAllJobs = async (req: Request, res: Response) => {
   try {
-    const { keyword, location, jobType, experience, sort } = req.query;
+    const { keyword, location, jobType, experience, sort, page = "1", limit = "4" } = req.query;
     const query: any = { status: "open" };
+
+    const pageNum = parseInt(page as string) || 1;
+    const limitNum = parseInt(limit as string) || 4;
+    const skip = (pageNum - 1) * limitNum;
 
     // If recruiter is logged in, show only their jobs
     const token = req.cookies?.token || req.header("Authorization")?.replace("Bearer ", "");
@@ -130,11 +148,21 @@ export const getAllJobs = async (req: Request, res: Response) => {
       sortOption = { "salary.min": 1 };
     }
 
+    const totalJobs = await Job.countDocuments(query);
+    const totalPages = Math.ceil(totalJobs / limitNum);
+
     const jobs = await Job.find(query)
       .populate("company", "name logo")
-      .sort(sortOption);
+      .sort(sortOption)
+      .skip(skip)
+      .limit(limitNum);
 
-    res.status(200).json({ jobs });
+    res.status(200).json({ 
+      jobs,
+      totalJobs,
+      totalPages,
+      currentPage: pageNum
+    });
   } catch (error) {
     console.error("Get All Jobs Error:", error);
     return res.status(error instanceof ZodError ? 400 : 500).json({
@@ -265,7 +293,6 @@ export const toggleSaveJob = async (req: Request, res: Response) => {
     });
   }
 };
-
 
 
 export const getGlobalStats = async (req: Request, res: Response) => {

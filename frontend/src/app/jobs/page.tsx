@@ -45,9 +45,10 @@ export default function JobsPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
-  const { jobs } = useSelector((state: RootState) => state.jobs);
+  const { jobs, pagination } = useSelector((state: RootState) => state.jobs);
   const { user } = useSelector((state: RootState) => state.auth);
   
+  const currentPage = parseInt(searchParams.get("page") || "1");
   const [searchQuery, setSearchQuery] = useState(searchParams.get("keyword") || "");
   const [location, setLocation] = useState(searchParams.get("location") || "");
 
@@ -55,12 +56,18 @@ export default function JobsPage() {
   const selectedExperience = searchParams.get("experience")?.split(",").filter(Boolean) || [];
   const selectedSort = searchParams.get("sort") || "recent";
 
-  const updateURL = (newParams: Record<string, string | null>) => {
+  const updateURL = (newParams: Record<string, string | null>, resetPage = true) => {
     const params = new URLSearchParams(searchParams.toString());
     Object.entries(newParams).forEach(([key, value]) => {
       if (value) params.set(key, value);
       else params.delete(key);
     });
+    
+    // Reset to page 1 if filters change, unless explicitly setting page
+    if (resetPage && !newParams.page) {
+      params.delete("page");
+    }
+    
     router.replace(`${pathname}?${params.toString()}`, { scroll: false });
   };
 
@@ -69,6 +76,8 @@ export default function JobsPage() {
       const params: any = {
         keyword: searchQuery,
         location: location,
+        page: currentPage,
+        limit: 4,
       };
 
       if (selectedTypes.length > 0) {
@@ -85,7 +94,12 @@ export default function JobsPage() {
 
       const response = await api.get("/api/jobs", { params });
       if (response.data.jobs) {
-        dispatch(setAllJobs(response.data.jobs));
+        dispatch(setAllJobs({
+          jobs: response.data.jobs,
+          totalJobs: response.data.totalJobs,
+          totalPages: response.data.totalPages,
+          currentPage: response.data.currentPage,
+        }));
       }
     } catch (error) {
       console.error("Failed to fetch jobs:", error);
@@ -321,20 +335,36 @@ export default function JobsPage() {
                       ))}
 
                       {/* Pagination */}
-                      <div className="mt-8 flex justify-center gap-2">
-                        <Button variant="outline" disabled>
-                          Previous
-                        </Button>
-                        <Button
-                          variant="outline"
-                          className="bg-primary text-primary-foreground hover:bg-primary/90"
-                        >
-                          1
-                        </Button>
-                        <Button variant="outline">2</Button>
-                        <Button variant="outline">3</Button>
-                        <Button variant="outline">Next</Button>
-                      </div>
+                      {pagination.totalPages > 1 && (
+                        <div className="mt-8 flex justify-center gap-2">
+                          <Button
+                            variant="outline"
+                            disabled={currentPage <= 1}
+                            onClick={() => updateURL({ page: String(currentPage - 1) }, false)}
+                          >
+                            Previous
+                          </Button>
+                          
+                          {Array.from({ length: pagination.totalPages }, (_, i) => i + 1).map((pageNum) => (
+                            <Button
+                              key={pageNum}
+                                variant={currentPage === pageNum ? "default" : "outline"}
+                                className={currentPage === pageNum ? "bg-primary text-primary-foreground hover:bg-primary/90" : ""}
+                              onClick={() => updateURL({ page: String(pageNum) }, false)}
+                            >
+                              {pageNum}
+                            </Button>
+                          ))}
+
+                          <Button
+                            variant="outline"
+                            disabled={currentPage >= pagination.totalPages}
+                            onClick={() => updateURL({ page: String(currentPage + 1) }, false)}
+                          >
+                            Next
+                          </Button>
+                        </div>
+                      )}
                     </>
                   )}
                 </div>

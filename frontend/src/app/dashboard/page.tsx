@@ -193,7 +193,7 @@ export default function DashboardPage() {
                           .join("")}
                       </AvatarFallback>
                     </Avatar>
-                    <h2 className="mt-4 text-xl font-semibold">{user.name}</h2>
+                    <h2 className="mt-4 text-xl font-semibold capitalize">{user.name}</h2>
                     <p className="text-muted-foreground">
                       {user.title || "Job Seeker"}
                     </p>

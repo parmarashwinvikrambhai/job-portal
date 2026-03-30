@@ -202,6 +202,7 @@ export default function AdminReportsPage() {
                             dataKey="users" 
                             stroke="#3b82f6" 
                             strokeWidth={3} 
+                            strokeDasharray="5 5"
                             dot={{ r: 4, fill: '#3b82f6', strokeWidth: 2, stroke: '#fff' }} 
                             activeDot={{ r: 6, strokeWidth: 0 }} 
                         />
@@ -221,17 +222,22 @@ export default function AdminReportsPage() {
 
             <div className="h-80 w-full">
                 <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={data?.jobsByType} layout="vertical" margin={{ left: 20 }}>
-                        <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
-                        <XAxis type="number" hide />
-                        <YAxis 
+                    <BarChart data={data?.jobsByType} margin={{ top: 20, right: 20, left: -20, bottom: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                        <XAxis 
                             dataKey="name" 
                             type="category" 
                             fontSize={12} 
                             tickLine={false} 
                             axisLine={false}
                             tick={{ fill: '#1e293b', fontWeight: 500 }}
-                            width={100}
+                        />
+                        <YAxis 
+                            type="number" 
+                            fontSize={12} 
+                            tickLine={false} 
+                            axisLine={false}
+                            tick={{ fill: '#64748b' }}
                         />
                         <Tooltip 
                             cursor={{ fill: '#f8fafc' }}
@@ -242,7 +248,7 @@ export default function AdminReportsPage() {
                                 boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)'
                             }} 
                         />
-                        <Bar dataKey="jobs" radius={[0, 6, 6, 0]} barSize={32}>
+                        <Bar dataKey="jobs" radius={[6, 6, 0, 0]} barSize={40}>
                             {data?.jobsByType.map((entry: any, index: number) => (
                                 <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                             ))}
